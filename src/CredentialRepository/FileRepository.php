@@ -1,0 +1,73 @@
+<?php
+
+namespace WebauthnEmulator\CredentialRepository;
+
+use JsonException;
+use RuntimeException;
+use WebauthnEmulator\CredentialInterface;
+
+/**
+ * Test example. Do not use in PROD!
+ */
+class FileRepository implements RepositoryInterface
+{
+    private array $currentState;
+
+    /**
+     * @throws JsonException
+     */
+    public function __construct(
+        private string $storagePath
+    )
+    {
+        $storageDir = dirname($this->storagePath);
+        if (!file_exists($storageDir) && !mkdir(directory: $storageDir, recursive: true) && !is_dir($storageDir)) {
+            throw new RuntimeException(sprintf('Directory "%s" was not created', $storageDir));
+        }
+        if (!file_exists($this->storagePath)) {
+            touch(filename: $this->storagePath);
+        }
+
+        $storageContent = file_get_contents($this->storagePath);
+        $this->currentState = $storageContent === '' ? [] : json_decode($storageContent, true, 512, JSON_THROW_ON_ERROR);
+    }
+
+    /**
+     * @throws JsonException
+     */
+    public function __destruct()
+    {
+        file_put_contents($this->storagePath, json_encode($this->currentState, JSON_THROW_ON_ERROR));
+    }
+
+    public function save(CredentialInterface $credential): static
+    {
+        $this->currentState[$credential->getRpId()][$credential->getId()] = $credential;
+        return $this;
+    }
+
+    /**
+     * @param string $rpId
+     * @param string $userHandle
+     *
+     * @return CredentialInterface[]
+     */
+    public function get(string $rpId): array
+    {
+        return $this->currentState[$rpId] ?? [];
+    }
+
+    /**
+     * @throws RuntimeException
+     */
+    public function getById(string $rpId, string $id): CredentialInterface
+    {
+        /** @var CredentialInterface $credential */
+        $credential = $this->currentState[$rpId][$id] ?? null;
+        if (null === $credential) {
+            throw new RuntimeException('credential not found');
+        }
+        $credential->incrementSignCount();
+        return $credential;
+    }
+}
