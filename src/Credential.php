@@ -10,17 +10,15 @@ use CBOR\UnsignedIntegerObject;
 use JetBrains\PhpStorm\ArrayShape;
 use OpenSSLAsymmetricKey;
 
-class Credential
+class Credential implements CredentialInterface
 {
-
     public function __construct(
-        public string               $id,
+        public string $id,
         public OpenSSLAsymmetricKey $privateKey,
-        public string               $rpId,
-        public string               $userHandle,
-        public int                  $signCount = 0
-    )
-    {
+        public string $rpId,
+        public string $userHandle,
+        public int $signCount = 0
+    ) {
     }
 
     public function getCoseKey(): string
@@ -29,27 +27,39 @@ class Credential
 
         // RFC 8152
         return (string)MapObject::create([
-            MapItem::create(
-                UnsignedIntegerObject::create(1), // kty (Identification of the key type)
-                UnsignedIntegerObject::create(2) // EC2 (Elliptic Curve Keys w/ x- and y-coordinate pair)
-            ),
-            MapItem::create(
-                UnsignedIntegerObject::create(3), // alg (Key usage restriction to this algorithm)
-                NegativeIntegerObject::create(-7) // ES256 (ECDSA w/ SHA-256)
-            ),
-            MapItem::create(
-                NegativeIntegerObject::create(-1), // crv (EC identifier - Taken from the "COSE Elliptic Curves" registry)
-                UnsignedIntegerObject::create(1)  // P-256 (NIST P-256 also known as secp256r1)
-            ),
-            MapItem::create(
-                NegativeIntegerObject::create(-2), // x-coordinate
-                ByteStringObject::create($keyDetails['ec']['x'])
-            ),
-            MapItem::create(
-                NegativeIntegerObject::create(-3), // y-coordinate
-                ByteStringObject::create($keyDetails['ec']['y'])
-            ),
-        ]);
+                                             MapItem::create(
+                                                 UnsignedIntegerObject::create(1),
+                                                 // kty (Identification of the key type)
+                                                 UnsignedIntegerObject::create(
+                                                     2
+                                                 ) // EC2 (Elliptic Curve Keys w/ x- and y-coordinate pair)
+                                             ),
+                                             MapItem::create(
+                                                 UnsignedIntegerObject::create(3),
+                                                 // alg (Key usage restriction to this algorithm)
+                                                 NegativeIntegerObject::create(-7) // ES256 (ECDSA w/ SHA-256)
+                                             ),
+                                             MapItem::create(
+                                                 NegativeIntegerObject::create(-1),
+                                                 // crv (EC identifier - Taken from the "COSE Elliptic Curves" registry)
+                                                 UnsignedIntegerObject::create(
+                                                     1
+                                                 )  // P-256 (NIST P-256 also known as secp256r1)
+                                             ),
+                                             MapItem::create(
+                                                 NegativeIntegerObject::create(-2), // x-coordinate
+                                                 ByteStringObject::create($keyDetails['ec']['x'])
+                                             ),
+                                             MapItem::create(
+                                                 NegativeIntegerObject::create(-3), // y-coordinate
+                                                 ByteStringObject::create($keyDetails['ec']['y'])
+                                             ),
+                                         ]);
+    }
+
+    public function getRpId(): string
+    {
+        return $this->rpId;
     }
 
     public function getRpIdHash(): string
@@ -67,13 +77,25 @@ class Credential
         return pack('n', strlen(base64_decode($this->id)));
     }
 
+    public function getId(): string
+    {
+        return $this->id;
+    }
+
     public function getSafeId(): string
     {
         $safeId = strtr($this->id, '+/', '-_');
+
         return rtrim($safeId, '=');
     }
 
-    #[ArrayShape(['id' => "string", 'privateKey' => "string", 'rpId' => "string", 'userHandle' => "string", 'signCount' => "int"])]
+    #[ArrayShape([
+        'id' => "string",
+        'privateKey' => "string",
+        'rpId' => "string",
+        'userHandle' => "string",
+        'signCount' => "int"
+    ])]
     public function toArray(): array
     {
         openssl_pkey_export($this->privateKey, $privateKey);
@@ -96,5 +118,16 @@ class Credential
             userHandle: $credentialData['userHandle'],
             signCount: $credentialData['signCount'],
         );
+    }
+
+    public function incrementSignCount(): static
+    {
+        $this->signCount++;
+        return $this;
+    }
+
+    public function getUserHandle(): string
+    {
+        return $this->userHandle;
     }
 }

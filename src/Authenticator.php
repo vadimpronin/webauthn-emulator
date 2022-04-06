@@ -8,51 +8,30 @@ use CBOR\ByteStringObject;
 use CBOR\MapItem;
 use CBOR\MapObject;
 use CBOR\TextStringObject;
-use InvalidArgumentException;
 use JetBrains\PhpStorm\ArrayShape;
+use JsonException;
 
 class Authenticator
 {
-    /** @var Credential[][] */
-    public array $credentialStorage = [];
-
-    public function __construct(?string $credentialStorageDump = null)
+    /**
+     * @throws JsonException
+     */
+    #[ArrayShape([
+        'id' => "string",
+        'rawId' => "string",
+        'response' => [
+            'clientDataJSON' => "string",
+            'attestationObject' => "string"
+        ],
+        'type' => "string"
+    ])]
+    public function getAttestation(CredentialInterface $credential, string $challenge): array
     {
-        if (!empty($credentialStorageDump)) {
-            $this->restoreCredentialStorage($credentialStorageDump);
-        }
-    }
-
-    public function addCredential(Credential $credential)
-    {
-        $this->credentialStorage[$credential->rpId][$credential->id] = $credential;
-    }
-
-    #[ArrayShape(['id' => "string", 'rawId' => "string", 'response' => ['clientDataJSON' => "string", 'attestationObject' => "string"], 'type' => "string"])]
-    public function makeCredential(array $options): array
-    {
-        if (empty($options['pubKeyCredParams']) || !in_array(['alg' => -7, 'type' => 'public-key'], $options['pubKeyCredParams'])) {
-            throw new InvalidArgumentException('Requested pubKeyCredParams does not contain supported type');
-        }
-
-        if (!empty($options['attestation']) && $options['attestation'] != 'none') {
-            throw new InvalidArgumentException('Only "none" attestation supported');
-        }
-
-        $credential = new Credential(
-            id: base64_encode(openssl_random_pseudo_bytes(32)),
-            privateKey: openssl_pkey_new(["private_key_type" => OPENSSL_KEYTYPE_EC, "curve_name" => "prime256v1"]),
-            rpId: $options['rp']['id'],
-            userHandle: $options['user']['id'],
-        );
-
-        $this->addCredential($credential);
-
         $clientDataJson = json_encode([
             'type' => 'webauthn.create',
-            'challenge' => $options['challenge'],
-            'origin' => 'https://' . $options['rp']['id'] . '/',
-        ], JSON_UNESCAPED_SLASHES);
+            'challenge' => $challenge,
+            'origin' => 'https://'.$credential->getRpId().'/',
+        ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
 
         $attestationObject = new MapObject([
             'fmt' => new MapItem(new TextStringObject('fmt'), new TextStringObject('none')),
@@ -74,19 +53,18 @@ class Authenticator
         ];
     }
 
+    /**
+     * @throws JsonException
+     */
     #[ArrayShape(['id' => "string", 'rawId' => "string", 'response' => ['authenticatorData' => "string", 'clientDataJSON' => "string", 'signature' => "string", 'userHandle' => "string"], 'type' => "string"])]
-    public function getAssertion(array $options): array
+    public function getAssertion(CredentialInterface $credential, string $challenge): array
     {
-        $credential = $this->getCredential($options['rpId'], $options['allowCredentials'] ?? null);
-
-        $credential->signCount++;
-
         // prepare signature
         $clientDataJson = json_encode([
-            'type' => 'webauthn.get',
-            'challenge' => $options['challenge'],
-            'origin' => 'https://' . $options['rpId'] . '/',
-        ], JSON_UNESCAPED_SLASHES);
+              'type' => 'webauthn.get',
+              'challenge' => $challenge,
+              'origin' => 'https://'.$credential->getRpId().'/',
+        ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
         $clientDataHash = hash('sha256', $clientDataJson, true);
 
         $flags = pack('C', 1);
@@ -105,49 +83,6 @@ class Authenticator
             ],
             'type' => 'public-key',
         ];
-    }
-
-    protected function getCredential(string $rpId, string|array|null $credentialIds): Credential
-    {
-        if (is_string($credentialIds)) {
-            $credentialIds = [
-                'id' => $credentialIds,
-                'type' => 'public-key',
-            ];
-        }
-
-        if (is_array($credentialIds)) {
-            foreach ($credentialIds as $credentialId) {
-                if (!empty($this->credentialStorage[$rpId][$credentialId['id']])) {
-                    return $this->credentialStorage[$rpId][$credentialId['id']];
-                }
-            }
-        } else if (!empty($this->credentialStorage[$rpId])) {
-            return reset($this->credentialStorage[$rpId]);
-        }
-
-        throw new InvalidArgumentException('Requested rpId and userId do not match any credential');
-    }
-
-    public function dumpCredentialStorage(): string
-    {
-        $storage = [];
-        foreach ($this->credentialStorage as $rpCredentials) {
-            foreach ($rpCredentials as $credential) {
-                $storage[] = $credential->toArray();
-            }
-        }
-
-        return json_encode($storage);
-    }
-
-    public function restoreCredentialStorage($storage)
-    {
-        $storage = json_decode($storage, true);
-
-        foreach ($storage as $credentialData) {
-            $this->addCredential(Credential::fromArray($credentialData));
-        }
     }
 
     protected function getAuthData(Credential $credential): string
