@@ -1,0 +1,17 @@
+{
+  "name": "pronin/webauthn-emulator",
+  "type": "library",
+  "description": "Webauthn device emulator in PHP",
+  "require": {
+    "php": "^8.0",
+    "ext-openssl": "*",
+    "spomky-labs/cbor-php": "^3.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "WebauthnEmulator\\": "src",
+      "WebauthnEmulator\\Tests\\": "tests"
+    }
+  },
+  "minimum-stability": "stable"
+}
