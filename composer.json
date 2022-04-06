@@ -13,5 +13,6 @@
       "WebauthnEmulator\\Tests\\": "tests"
     }
   },
+  "license": "MIT",
   "minimum-stability": "stable"
 }
