@@ -27,34 +27,27 @@ class Credential implements CredentialInterface
 
         // RFC 8152
         return (string)MapObject::create([
-                                             MapItem::create(
-                                                 UnsignedIntegerObject::create(1),
-                                                 // kty (Identification of the key type)
-                                                 UnsignedIntegerObject::create(
-                                                     2
-                                                 ) // EC2 (Elliptic Curve Keys w/ x- and y-coordinate pair)
-                                             ),
-                                             MapItem::create(
-                                                 UnsignedIntegerObject::create(3),
-                                                 // alg (Key usage restriction to this algorithm)
-                                                 NegativeIntegerObject::create(-7) // ES256 (ECDSA w/ SHA-256)
-                                             ),
-                                             MapItem::create(
-                                                 NegativeIntegerObject::create(-1),
-                                                 // crv (EC identifier - Taken from the "COSE Elliptic Curves" registry)
-                                                 UnsignedIntegerObject::create(
-                                                     1
-                                                 )  // P-256 (NIST P-256 also known as secp256r1)
-                                             ),
-                                             MapItem::create(
-                                                 NegativeIntegerObject::create(-2), // x-coordinate
-                                                 ByteStringObject::create($keyDetails['ec']['x'])
-                                             ),
-                                             MapItem::create(
-                                                 NegativeIntegerObject::create(-3), // y-coordinate
-                                                 ByteStringObject::create($keyDetails['ec']['y'])
-                                             ),
-                                         ]);
+            MapItem::create(
+                UnsignedIntegerObject::create(1), // kty (Identification of the key type)
+                UnsignedIntegerObject::create(2) // EC2 (Elliptic Curve Keys w/ x- and y-coordinate pair)
+            ),
+            MapItem::create(
+                UnsignedIntegerObject::create(3), // alg (Key usage restriction to this algorithm)
+                NegativeIntegerObject::create(-7) // ES256 (ECDSA w/ SHA-256)
+            ),
+            MapItem::create(
+                NegativeIntegerObject::create(-1), // crv (EC identifier - Taken from the "COSE Elliptic Curves" registry)
+                UnsignedIntegerObject::create(1)  // P-256 (NIST P-256 also known as secp256r1)
+            ),
+            MapItem::create(
+                NegativeIntegerObject::create(-2), // x-coordinate
+                ByteStringObject::create($keyDetails['ec']['x'])
+            ),
+            MapItem::create(
+                NegativeIntegerObject::create(-3), // y-coordinate
+                ByteStringObject::create($keyDetails['ec']['y'])
+            ),
+        ]);
     }
 
     public function getRpId(): string

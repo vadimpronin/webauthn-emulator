@@ -30,7 +30,7 @@ class Authenticator
         $clientDataJson = json_encode([
             'type' => 'webauthn.create',
             'challenge' => $challenge,
-            'origin' => 'https://'.$credential->getRpId().'/',
+            'origin' => 'https://' . $credential->getRpId() . '/',
         ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
 
         $attestationObject = new MapObject([
@@ -61,9 +61,9 @@ class Authenticator
     {
         // prepare signature
         $clientDataJson = json_encode([
-              'type' => 'webauthn.get',
-              'challenge' => $challenge,
-              'origin' => 'https://'.$credential->getRpId().'/',
+            'type' => 'webauthn.get',
+            'challenge' => $challenge,
+            'origin' => 'https://' . $credential->getRpId() . '/',
         ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
         $clientDataHash = hash('sha256', $clientDataJson, true);
 

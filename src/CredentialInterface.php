@@ -13,11 +13,17 @@ interface CredentialInterface
     public function getCoseKey(): string;
 
     public function getRpId(): string;
+
     public function getRpIdHash(): string;
+
     public function getPackedSignCount(): string;
+
     public function getPackedIdLength(): string;
+
     public function getId(): string;
+
     public function getSafeId(): string;
+
     public function getUserHandle(): string;
 
     #[ArrayShape([
