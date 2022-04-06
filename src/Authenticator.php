@@ -1,5 +1,7 @@
 <?php
 
+/** @noinspection PhpUnused */
+
 namespace WebauthnEmulator;
 
 use CBOR\ByteStringObject;

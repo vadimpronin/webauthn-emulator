@@ -27,25 +27,26 @@ class Credential
     {
         $keyDetails = openssl_pkey_get_details($this->privateKey);
 
+        // RFC 8152
         return (string)MapObject::create([
             MapItem::create(
-                UnsignedIntegerObject::create(1), // TYPE
-                UnsignedIntegerObject::create(2) // TYPE_EC2
+                UnsignedIntegerObject::create(1), // kty (Identification of the key type)
+                UnsignedIntegerObject::create(2) // EC2 (Elliptic Curve Keys w/ x- and y-coordinate pair)
             ),
             MapItem::create(
-                UnsignedIntegerObject::create(3), // ALG
-                NegativeIntegerObject::create(-7) // COSE_ALGORITHM_ES256
+                UnsignedIntegerObject::create(3), // alg (Key usage restriction to this algorithm)
+                NegativeIntegerObject::create(-7) // ES256 (ECDSA w/ SHA-256)
             ),
             MapItem::create(
-                NegativeIntegerObject::create(-1), // DATA_CURVE
-                UnsignedIntegerObject::create(1)  // CURVE_P256
+                NegativeIntegerObject::create(-1), // crv (EC identifier - Taken from the "COSE Elliptic Curves" registry)
+                UnsignedIntegerObject::create(1)  // P-256 (NIST P-256 also known as secp256r1)
             ),
             MapItem::create(
-                NegativeIntegerObject::create(-2), // DATA_X
+                NegativeIntegerObject::create(-2), // x-coordinate
                 ByteStringObject::create($keyDetails['ec']['x'])
             ),
             MapItem::create(
-                NegativeIntegerObject::create(-3), // DATA_Y
+                NegativeIntegerObject::create(-3), // y-coordinate
                 ByteStringObject::create($keyDetails['ec']['y'])
             ),
         ]);
@@ -63,7 +64,7 @@ class Credential
 
     public function getPackedIdLength(): string
     {
-        return pack('n', mb_strlen(base64_decode($this->id), '8bit'));
+        return pack('n', strlen(base64_decode($this->id)));
     }
 
     public function getSafeId(): string
@@ -72,7 +73,7 @@ class Credential
         return rtrim($safeId, '=');
     }
 
-    #[ArrayShape(['id' => "string", 'privateKey' => "", 'rpId' => "string", 'userHandle' => "string", 'signCount' => "int"])]
+    #[ArrayShape(['id' => "string", 'privateKey' => "string", 'rpId' => "string", 'userHandle' => "string", 'signCount' => "int"])]
     public function toArray(): array
     {
         openssl_pkey_export($this->privateKey, $privateKey);
