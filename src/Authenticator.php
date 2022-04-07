@@ -9,8 +9,8 @@ use CBOR\TextStringObject;
 use InvalidArgumentException;
 use JetBrains\PhpStorm\ArrayShape;
 use JsonException;
-use RuntimeException;
 use WebauthnEmulator\CredentialRepository\RepositoryInterface;
+use WebauthnEmulator\Exceptions\CredentialNotFoundException;
 
 class Authenticator implements AuthenticatorInterface
 {
@@ -118,7 +118,7 @@ class Authenticator implements AuthenticatorInterface
                 try {
                     $credential = $this->repository->getById($rpId, $credentialId['id']);
                 }
-                catch (RuntimeException) {
+                catch (CredentialNotFoundException) {
                     // receive exception if not found, normal case
                     continue;
                 }
@@ -129,7 +129,7 @@ class Authenticator implements AuthenticatorInterface
             try {
                 return $this->repository->getById($rpId, null);
             }
-            catch (RuntimeException) {
+            catch (CredentialNotFoundException) {
                 // nothing found, normal case
             }
         }

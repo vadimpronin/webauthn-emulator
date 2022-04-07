@@ -2,8 +2,8 @@
 
 namespace WebauthnEmulator\CredentialRepository;
 
-use RuntimeException;
 use WebauthnEmulator\CredentialInterface;
+use WebauthnEmulator\Exceptions\CredentialNotFoundException;
 
 interface RepositoryInterface
 {
@@ -17,7 +17,7 @@ interface RepositoryInterface
     public function get(string $rpId): array;
 
     /**
-     * @throws RuntimeException
+     * @throws CredentialNotFoundException
      */
     public function getById(string $rpId, string $id): CredentialInterface;
 }
