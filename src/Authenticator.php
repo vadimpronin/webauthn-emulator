@@ -1,18 +1,25 @@
 <?php
 
-/** @noinspection PhpUnused */
-
 namespace WebauthnEmulator;
 
 use CBOR\ByteStringObject;
 use CBOR\MapItem;
 use CBOR\MapObject;
 use CBOR\TextStringObject;
+use InvalidArgumentException;
 use JetBrains\PhpStorm\ArrayShape;
 use JsonException;
+use RuntimeException;
+use WebauthnEmulator\CredentialRepository\RepositoryInterface;
 
-class Authenticator
+class Authenticator implements AuthenticatorInterface
 {
+    public function __construct(
+        protected RepositoryInterface $repository
+    )
+    {
+    }
+
     /**
      * @throws JsonException
      */
@@ -25,11 +32,13 @@ class Authenticator
         ],
         'type' => "string"
     ])]
-    public function getAttestation(CredentialInterface $credential, string $challenge): array
+    public function getAttestation(array $registerOptions): array
     {
+        $credential = $this->createCredential($registerOptions);
+
         $clientDataJson = json_encode([
             'type' => 'webauthn.create',
-            'challenge' => $challenge,
+            'challenge' => $registerOptions['challenge'],
             'origin' => 'https://' . $credential->getRpId() . '/',
         ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
 
@@ -44,7 +53,7 @@ class Authenticator
 
         return [
             'id' => $credential->getSafeId(),
-            'rawId' => $credential->id,
+            'rawId' => $credential->getId(),
             'response' => [
                 'clientDataJSON' => base64_encode($clientDataJson),
                 'attestationObject' => base64_encode((string)$attestationObject),
@@ -57,8 +66,10 @@ class Authenticator
      * @throws JsonException
      */
     #[ArrayShape(['id' => "string", 'rawId' => "string", 'response' => ['authenticatorData' => "string", 'clientDataJSON' => "string", 'signature' => "string", 'userHandle' => "string"], 'type' => "string"])]
-    public function getAssertion(CredentialInterface $credential, string $challenge): array
+    public function getAssertion(string $rpId, string|array|null $credentialIds, string $challenge): array
     {
+        $credential = $this->getCredential($rpId, $credentialIds);
+
         // prepare signature
         $clientDataJson = json_encode([
             'type' => 'webauthn.get',
@@ -74,15 +85,56 @@ class Authenticator
 
         return [
             'id' => $credential->getSafeId(),
-            'rawId' => $credential->id,
+            'rawId' => $credential->getId(),
             'response' => [
                 'authenticatorData' => base64_encode($authenticatorData),
                 'clientDataJSON' => base64_encode($clientDataJson),
                 'signature' => base64_encode($signature),
-                'userHandle' => $credential->userHandle,
+                'userHandle' => $credential->getUserHandle(),
             ],
             'type' => 'public-key',
         ];
+    }
+
+    protected function createCredential(array $options): CredentialInterface
+    {
+        $credential = CredentialFactory::makeFromOptions($options);
+        $this->repository->save($credential);
+
+        return $credential;
+    }
+
+    protected function getCredential(string $rpId, string|array|null $credentialIds): CredentialInterface
+    {
+        if (is_string($credentialIds)) {
+            $credentialIds = [[
+                'id' => $credentialIds,
+                'type' => 'public-key',
+            ]];
+        }
+
+        if (is_array($credentialIds)) {
+            foreach ($credentialIds as $credentialId) {
+                try {
+                    $credential = $this->repository->getById($rpId, $credentialId['id']);
+                }
+                catch (RuntimeException) {
+                    // receive exception if not found, normal case
+                    continue;
+                }
+
+                return $credential;
+            }
+        } else {
+            try {
+                return $this->repository->getById($rpId, null);
+            }
+            catch (RuntimeException) {
+                // nothing found, normal case
+            }
+        }
+
+        throw new InvalidArgumentException('Requested rpId and userId do not match any credential');
     }
 
     protected function getAuthData(Credential $credential): string
@@ -95,7 +147,7 @@ class Authenticator
         $authData .= $credential->getPackedSignCount();
         $authData .= $aaGuid;
         $authData .= $credential->getPackedIdLength();
-        $authData .= base64_decode($credential->id);
+        $authData .= base64_decode($credential->getId());
         $authData .= $credential->getCoseKey();
 
         return $authData;

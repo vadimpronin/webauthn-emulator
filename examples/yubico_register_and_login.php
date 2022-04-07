@@ -2,7 +2,6 @@
 
 use GuzzleHttp\Client;
 use WebauthnEmulator\Authenticator;
-use WebauthnEmulator\CredentialFactory;
 use WebauthnEmulator\CredentialRepository\FileRepository;
 
 require_once __DIR__ . '/../vendor/autoload.php';
@@ -13,7 +12,7 @@ $httpClient = new Client([
     'cookies' => true,
 ]);
 
-$authenticator = new Authenticator();
+$authenticator = new Authenticator($storage);
 
 $data = ["userVerification" => "discouraged"];
 // start
@@ -24,10 +23,8 @@ dump('register start response: ');
 dump($pkcco);
 $pkcco["publicKey"]["attestation"] = 'none';
 
-$credential = CredentialFactory::makeFromOptions($pkcco['publicKey']);
-
 // finish register
-$attestation = $authenticator->getAttestation($credential, $pkcco['publicKey']['challenge']);
+$attestation = $authenticator->getAttestation($pkcco['publicKey']);
 
 $data = $pkcco;
 unset($data["publicKey"]);
@@ -50,7 +47,6 @@ dump($decodedResponse);
 echo "\n\n\n";
 
 if ($decodedResponse['status'] === 'success') {
-    $storage->save($credential);
     dump('registered credential saved');
 }
 
@@ -60,48 +56,47 @@ if ($decodedResponse['status'] === 'success') {
 
 // --------------------- login ----------------- //
 
-    $data = ["userVerification" => "discouraged"];
-    $response = $httpClient->post('https://demo.yubico.com/api/v1/simple/webauthn/authenticate-begin', ['json' => $data]);
+$data = ["userVerification" => "discouraged"];
+$response = $httpClient->post('https://demo.yubico.com/api/v1/simple/webauthn/authenticate-begin', ['json' => $data]);
 
-    $pkcro = json_decode($response->getBody()->getContents(), true)['data'];
+$pkcro = json_decode($response->getBody()->getContents(), true)['data'];
 
-    dump('publicKeyCredentialRequestOptions: ');
-    dump($pkcro);
-    echo "\n\n\n";
+dump('publicKeyCredentialRequestOptions: ');
+dump($pkcro);
+echo "\n\n\n";
 
-    $rpId = $pkcro['publicKey']['rpId'];
-    $challenge = $pkcro['publicKey']['challenge'];
+$rpId = $pkcro['publicKey']['rpId'];
+$challenge = $pkcro['publicKey']['challenge'];
 
-    $credentialId = array_pop($pkcro['publicKey']['allowCredentials'])['id'] ?? null;
-    if ($credentialId === null) {
-        throw new RuntimeException('credential id not found in response');
-    }
+$credentialId = array_pop($pkcro['publicKey']['allowCredentials'])['id'] ?? null;
+if ($credentialId === null) {
+    throw new RuntimeException('credential id not found in response');
+}
 
-    $credential = $storage->getById($rpId, $credentialId);
-    $assertion = $authenticator->getAssertion($credential, $challenge);
+$assertion = $authenticator->getAssertion($rpId, $credentialId, $challenge);
 
-    dump('credential assertion: ');
-    dump($assertion);
-    echo "\n\n\n";
+dump('credential assertion: ');
+dump($assertion);
+echo "\n\n\n";
 
-    $data = [
-        "requestId" => $pkcro["requestId"],
-        "assertion" => [
-            "credentialId" => $assertion['rawId'],
-            "authenticatorData" => $assertion['response']['authenticatorData'],
-            "clientDataJSON" => $assertion['response']['clientDataJSON'],
-            "signature" => $assertion['response']['signature'],
-        ],
-    ];
+$data = [
+    "requestId" => $pkcro["requestId"],
+    "assertion" => [
+        "credentialId" => $assertion['rawId'],
+        "authenticatorData" => $assertion['response']['authenticatorData'],
+        "clientDataJSON" => $assertion['response']['clientDataJSON'],
+        "signature" => $assertion['response']['signature'],
+    ],
+];
 
-    dump('auth finish request');
-    dump($data);
-    echo "\n\n\n";
+dump('auth finish request');
+dump($data);
+echo "\n\n\n";
 
-    $response = $httpClient->post('https://demo.yubico.com/api/v1/simple/webauthn/authenticate-finish', ['json' => $data]);
+$response = $httpClient->post('https://demo.yubico.com/api/v1/simple/webauthn/authenticate-finish', ['json' => $data]);
 
-    dump('auth finish response:');
-    dump($response->getBody()->getContents());
-    echo "\n\n\n";
+dump('auth finish response:');
+dump($response->getBody()->getContents());
+echo "\n\n\n";
 
 // ---------------- end login ------------------ //
