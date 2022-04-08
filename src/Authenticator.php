@@ -6,11 +6,11 @@ use CBOR\ByteStringObject;
 use CBOR\MapItem;
 use CBOR\MapObject;
 use CBOR\TextStringObject;
-use InvalidArgumentException;
 use JetBrains\PhpStorm\ArrayShape;
 use JsonException;
 use WebauthnEmulator\CredentialRepository\RepositoryInterface;
 use WebauthnEmulator\Exceptions\CredentialNotFoundException;
+use WebauthnEmulator\Exceptions\InvalidArgumentException;
 
 class Authenticator implements AuthenticatorInterface
 {

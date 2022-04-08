@@ -9,6 +9,7 @@ use CBOR\NegativeIntegerObject;
 use CBOR\UnsignedIntegerObject;
 use JetBrains\PhpStorm\ArrayShape;
 use OpenSSLAsymmetricKey;
+use WebauthnEmulator\Exceptions\InvalidArgumentException;
 
 class Credential implements CredentialInterface
 {
@@ -104,6 +105,13 @@ class Credential implements CredentialInterface
 
     public static function fromArray(array $credentialData): static
     {
+        foreach (['id', 'privateKey', 'rpId', 'userHandle', 'signCount'] as $requiredField) {
+            if (array_key_exists($requiredField, $credentialData)) {
+                continue;
+            }
+            throw new InvalidArgumentException(sprintf('"%s" field is required', $requiredField));
+        }
+
         return new static(
             id: $credentialData['id'],
             privateKey: openssl_pkey_get_private($credentialData['privateKey']),

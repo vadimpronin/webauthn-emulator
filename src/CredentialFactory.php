@@ -2,7 +2,7 @@
 
 namespace WebauthnEmulator;
 
-use InvalidArgumentException;
+use WebauthnEmulator\Exceptions\InvalidArgumentException;
 
 class CredentialFactory
 {
