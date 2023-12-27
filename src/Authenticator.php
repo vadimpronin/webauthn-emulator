@@ -32,15 +32,15 @@ class Authenticator implements AuthenticatorInterface
         ],
         'type' => "string"
     ])]
-    public function getAttestation(array $registerOptions): array
+    public function getAttestation(array $registerOptions, ?string $origin = null, array $extra = []): array
     {
         $credential = $this->createCredential($registerOptions);
 
         $clientDataJson = json_encode([
             'type' => 'webauthn.create',
             'challenge' => $registerOptions['challenge'],
-            'origin' => 'https://' . $credential->getRpId(),
-        ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
+            'origin' => $origin ?? 'https://' . $credential->getRpId(),
+        ] + $extra, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
 
         $attestationObject = new MapObject([
             'fmt' => new MapItem(new TextStringObject('fmt'), new TextStringObject('none')),
