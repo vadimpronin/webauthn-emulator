@@ -39,7 +39,7 @@ class Authenticator implements AuthenticatorInterface
         $clientDataJson = json_encode([
             'type' => 'webauthn.create',
             'challenge' => $registerOptions['challenge'],
-            'origin' => 'https://' . $credential->getRpId() . '/',
+            'origin' => 'https://' . $credential->getRpId(),
         ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
 
         $attestationObject = new MapObject([
@@ -52,7 +52,7 @@ class Authenticator implements AuthenticatorInterface
         ]);
 
         return [
-            'id' => $credential->getSafeId(),
+            'id' => $this->getSafeId($credential->getId()),
             'rawId' => $credential->getId(),
             'response' => [
                 'clientDataJSON' => base64_encode($clientDataJson),
@@ -74,7 +74,7 @@ class Authenticator implements AuthenticatorInterface
         $clientDataJson = json_encode([
             'type' => 'webauthn.get',
             'challenge' => $challenge,
-            'origin' => 'https://' . $credential->getRpId() . '/',
+            'origin' => 'https://' . $credential->getRpId(),
         ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
         $clientDataHash = hash('sha256', $clientDataJson, true);
 
@@ -84,7 +84,7 @@ class Authenticator implements AuthenticatorInterface
         openssl_sign($authenticatorData . $clientDataHash, $signature, $credential->privateKey, OPENSSL_ALGO_SHA256);
 
         return [
-            'id' => $credential->getSafeId(),
+            'id' => $this->getSafeId($credential->getId()),
             'rawId' => $credential->getId(),
             'response' => [
                 'authenticatorData' => base64_encode($authenticatorData),
@@ -116,7 +116,9 @@ class Authenticator implements AuthenticatorInterface
         if (is_array($credentialIds)) {
             foreach ($credentialIds as $credentialId) {
                 try {
-                    $credential = $this->repository->getById($rpId, $credentialId['id']);
+                    // ensure that we always use the raw credential id
+                    $rawId = $this->getOriginalId($credentialId['id']);
+                    $credential = $this->repository->getById($rpId, $rawId);
                 }
                 catch (CredentialNotFoundException) {
                     // receive exception if not found, normal case
@@ -151,5 +153,16 @@ class Authenticator implements AuthenticatorInterface
         $authData .= $credential->getCoseKey();
 
         return $authData;
+    }
+
+    protected function getSafeId(string $base64EncodedId): string
+    {
+        return str_replace(['+', '/', '='], ['-', '_', ''], $base64EncodedId);
+    }
+
+    protected function getOriginalId(string $safeId): string
+    {
+        // ensure that we always use the raw credential id, encoded in the same way as the original
+        return base64_encode(base64_decode(str_replace(['-', '_'], ['+', '/'], $safeId)));
     }
 }

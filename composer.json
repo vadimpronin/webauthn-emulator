@@ -1,5 +1,6 @@
 {
   "name": "pronin/webauthn-emulator",
+  "version": "1.0.0",
   "type": "library",
   "description": "Webauthn device emulator in PHP (client side)",
   "require": {
@@ -16,7 +17,6 @@
   "license": "MIT",
   "minimum-stability": "stable",
   "require-dev": {
-    "guzzlehttp/guzzle": "^7.4",
-    "symfony/var-dumper": "^6.0"
+    "guzzlehttp/guzzle": "^7.4"
   }
 }

@@ -4,6 +4,7 @@ namespace WebauthnEmulator\CredentialRepository;
 
 use JsonException;
 use RuntimeException;
+use WebauthnEmulator\CredentialFactory;
 use WebauthnEmulator\CredentialInterface;
 use WebauthnEmulator\Exceptions\CredentialNotFoundException;
 
@@ -43,7 +44,7 @@ class FileRepository implements RepositoryInterface
 
     public function save(CredentialInterface $credential): static
     {
-        $this->currentState[$credential->getRpId()][$credential->getId()] = $credential;
+        $this->currentState[$credential->getRpId()][$credential->getId()] = $credential->toArray();
         return $this;
     }
 
@@ -62,11 +63,13 @@ class FileRepository implements RepositoryInterface
      */
     public function getById(string $rpId, string $id): CredentialInterface
     {
-        /** @var CredentialInterface $credential */
-        $credential = $this->currentState[$rpId][$id] ?? null;
-        if (null === $credential) {
+        $credentialData = $this->currentState[$rpId][$id] ?? null;
+        if (null === $credentialData) {
             throw new CredentialNotFoundException('credential not found');
         }
+
+        $credential = CredentialFactory::makeFromArray($credentialData);
+
         $credential->incrementSignCount();
         return $credential;
     }

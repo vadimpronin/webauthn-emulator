@@ -16,7 +16,6 @@ interface CredentialInterface
     public function getPackedSignCount(): string;
     public function getPackedIdLength(): string;
     public function getId(): string;
-    public function getSafeId(): string;
     public function getUserHandle(): string;
     #[ArrayShape([
         'id' => "string",

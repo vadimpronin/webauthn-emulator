@@ -9,7 +9,7 @@ class CredentialFactory
     public static function makeFromOptions(array $options): CredentialInterface
     {
         if (empty($options['pubKeyCredParams']) || !in_array(['alg' => -7, 'type' => 'public-key'], $options['pubKeyCredParams'])) {
-            throw new InvalidArgumentException('Requested pubKeyCredParams does not contain supported type');
+            throw new InvalidArgumentException('Requested pubKeyCredParams does not contain supported type. Only ES256 (alg: -7) is supported at the moment.');
         }
 
         if (!empty($options['attestation']) && $options['attestation'] !== 'none') {
@@ -23,4 +23,10 @@ class CredentialFactory
             userHandle: $options['user']['id'],
         );
     }
+
+    public static function makeFromArray(array $data): CredentialInterface
+    {
+        return Credential::fromArray($data);
+    }
 }
+

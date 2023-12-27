@@ -76,13 +76,6 @@ class Credential implements CredentialInterface
         return $this->id;
     }
 
-    public function getSafeId(): string
-    {
-        $safeId = strtr($this->id, '+/', '-_');
-
-        return rtrim($safeId, '=');
-    }
-
     #[ArrayShape([
         'id' => "string",
         'privateKey' => "string",
