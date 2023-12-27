@@ -10,7 +10,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 $storage = new FileRepository('./key_storage.json');
 
 $httpClient = new Client([
-    'cookies' => new FileCookieJar('./cookies.json', TRUE),
+    'cookies' => new FileCookieJar('./cookies.json', true),
 ]);
 
 $authenticator = new Authenticator($storage);

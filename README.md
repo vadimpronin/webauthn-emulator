@@ -121,12 +121,12 @@ $assertion = $authenticator->getAssertion(
 ## More Examples
 
 For more detailed examples of how to use `webauthn-emulator` to simulate WebAuthn registration and authentication
-processes, refer to the `examples` directory in the repository:
+processes, refer to the [examples](examples) directory in the repository:
 
-- `examples/webauthnio_reg.php`: Simulate the registration process with a WebAuthn server.
-- `examples/webauthnio_login.php`: Simulate the login process with a WebAuthn server.
-- `examples/yubico_reg.php`: Simulate the registration process with a Yubico server.
-- `examples/yubico_login.php`: Simulate the login process with a Yubico server.
+- [webauthnio_reg.php](examples/webauthnio_reg.php): Registration process with a webauthn.io demo server.
+- [webauthnio_login.php](examples/webauthnio_login.php): Login process with a webauthn.io demo server.
+- [yubico_reg.php](examples/yubico_reg.php): Registration process with a Yubico demo server.
+- [yubico_login.php](examples/yubico_login.php): Login process with a Yubico demo server.
 
 These examples provide a comprehensive guide on constructing full registration and authentication payloads and
 interacting with WebAuthn servers.
