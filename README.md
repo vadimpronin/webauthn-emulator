@@ -1,17 +1,23 @@
 # webauthn-emulator
 
-`webauthn-emulator` is a PHP library that emulates WebAuthn-compatible authenticators. It enables developers to
-integrate WebAuthn client-side authentication into their applications without the need for physical security devices
-like YubiKeys, Touch ID, Face ID, Windows Hello, etc.
+`webauthn-emulator` is a PHP library that emulates WebAuthn-compatible authenticators like YubiKeys, Touch ID, Face ID,
+Windows Hello, etc. It enables developers to integrate WebAuthn client-side authentication into their applications.
 
 ## Table of Contents
 
 - [Features](#features)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
+- [Usage](#usage)
+    - [Initialization](#initialization)
+    - [Registration (Attestation)](#registration-attestation)
+    - [Authentication (Assertion)](#authentication-assertion)
+    - [Base64url vs Base64 Encoding](#base64url-vs-base64-encoding)
 - [More Examples](#more-examples)
 - [Storing Credentials](#storing-credentials)
 - [Supported Features and Limitations](#supported-features-and-limitations)
+    - [Features](#features)
+    - [Limitations](#limitations)
 - [Contributing and Reporting Issues](#contributing-and-reporting-issues)
 - [License](#license)
 - [Acknowledgments](#acknowledgments)
@@ -43,7 +49,7 @@ use WebauthnEmulator\Authenticator;
 use WebauthnEmulator\CredentialRepository\FileRepository;
 
 // Instantiate the file repository to store credentials
-$storage = new FileRepository('path/to/credential/storage.json');
+$storage = new FileRepository('path/to/credential/storage.txt');
 
 // Create the authenticator instance
 $authenticator = new Authenticator($storage);
@@ -118,18 +124,216 @@ $assertion = $authenticator->getAssertion(
 );
 ```
 
+## Usage
+
+The `webauthn-emulator` library provides a straightforward interface to emulate WebAuthn authenticators. Below are the
+primary methods you will use to interact with the library, along with detailed explanations of their parameters.
+
+### Initialization
+
+To begin using the emulator, instantiate the `Authenticator` class with a credential repository that implements
+the `RepositoryInterface`. The library includes a `FileRepository` for testing purposes, which you can replace with a
+custom repository for different storage solutions.
+
+```php
+use WebauthnEmulator\Authenticator;
+use WebauthnEmulator\CredentialRepository\FileRepository;
+
+// Instantiate the file repository to store credentials
+$storage = new FileRepository('path/to/credential/storage.txt');
+
+// Create the authenticator instance
+$authenticator = new Authenticator($storage);
+```
+
+### Registration (Attestation)
+
+The `getAttestation` method generates a response to a WebAuthn registration challenge, simulating the process of
+registering a new authenticator with a WebAuthn relying party.
+
+`getAttestation` accepts the following parameters:
+
+- `registerOptions` (array, required): Contains the registration challenge data from the relying party, including the
+  relying party's information, user data, challenge, and other registration options.
+- `origin` (string, optional): The origin of the relying party's website. It defaults to an origin constructed from
+  the `rpId` if omitted.
+- `extra` (array, optional): Additional data to include in the `clientDataJSON` object. If omitted, only standard
+  fields are included.
+
+```php
+$registrationChallenge = [
+    // ... (challenge data provided by the relying party)
+];
+
+// Generate a response to the registration challenge
+$attestation = $authenticator->getAttestation(
+    registerOptions: $registrationChallenge,
+    origin: 'https://service.example.com', // optional
+    extra: ['crossOrigin' => false] // optional
+);
+
+echo(json_encode($attestation, JSON_PRETTY_PRINT));
+
+/* Output:
+{
+    "id": "HB_Pkygg...LQK3WkA",
+    "rawId": "HB\/Pkygg...LQK3WkA=",
+    "response": {
+        "clientDataJSON": "eyJ0e...pbyJ9",
+        "attestationObject": "o2Nmb...y4kw="
+    },
+    "type": "public-key"
+}
+*/
+```
+
+### Authentication (Assertion)
+
+The `getAssertion` method generates a response to a WebAuthn authentication challenge, simulating the process of logging
+in with a previously registered authenticator.
+
+`getAssertion` accepts the following parameters:
+
+- `rpId` (string, required): The relying party identifier, typically the domain name of the relying party's website.
+- `credentialIds` (string|array|null, optional): A single credential ID, an array of credential descriptors, or null.
+  It identifies which credentials are eligible for authentication. If null or omitted, any available credential for
+  the `rpId` may be used.
+- `challenge` (string, required): A base64 or base64url encoded challenge from the relying party to prevent replay
+  attacks.
+- `origin` (string, optional): The origin of the relying party's website. It defaults to an origin constructed from
+  the `rpId` if omitted.
+- `extra` (array, optional): Additional data to include in the `clientDataJSON` object. If omitted, only standard
+  fields are included.
+
+```php
+$authChallenge = [
+    // ... (challenge data provided by the relying party)
+];
+
+// Generate a response to the authentication challenge
+$assertion = $authenticator->getAssertion(
+    rpId: $authChallenge['rpId'],
+    credentialIds: $authChallenge['allowCredentials'],
+    challenge: $authChallenge['challenge']
+    origin: 'https://service.example.com', // optional
+    extra: ['crossOrigin' => false] // optional
+);
+
+echo(json_encode($assertion, JSON_PRETTY_PRINT));
+
+/* Output:
+{
+    "id": "HB_Pkygg...LQK3WkA",
+    "rawId": "HB\/Pkygg...LQK3WkA=",
+    "response": {
+        "authenticatorData": "E4Mf1...AAA==",
+        "clientDataJSON": "eyJ0e...pbyJ9",
+        "signature": "MEYCI...lzwEj",
+        "userHandle": "ZmRmM...mZDk2"
+    },
+    "type": "public-key"
+}
+*/
+
+```
+
+The `origin` parameter should match the origin of the WebAuthn relying party. The `extra` parameter is an associative
+array that allows you to include additional data in the `clientDataJSON` object for both registration and authentication
+operations. These parameters are optional and can be omitted if not required for your use case.
+
+### Base64url vs Base64 Encoding
+
+WebAuthn servers often use base64url encoding to represent binary data in a URL-safe format. This encoding is similar to
+standard base64 but uses different characters for padding and to represent the 62nd and 63rd values in the index table.
+Specifically, base64url encoding replaces `+` with `-`, `/` with `_`, and omits the padding character `=`. This makes it
+suitable for use in URLs and filenames without requiring additional encoding.
+
+Different WebAuthn server implementations vary in their use of base64url encoding. Some use base64url-encoded
+strings for 'id' or 'challenge' fields, while others use standard base64 encoding or a mix of both. This lack of
+consistency puts the burden to figure out which encoding is used by a particular server and to convert the data
+accordingly on the developer.
+
+The `webauthn-emulator` library provides two utility methods to handle these encoding variations:
+
+- `base64Normal2Url`: Converts standard base64-encoded strings or arrays to base64url encoding. This method is useful
+  when you need to send data to a server that expects base64url-encoded strings.
+
+- `base64Url2Normal`: Converts base64url-encoded strings or arrays back to standard base64 encoding with padding. This
+  method is helpful when you receive data from a server that uses base64url encoding, before feeding it to the emulator.
+
+These methods can be applied recursively to arrays, making it easy to encode or decode all elements within an array.
+
+#### Usage of Base64url Encoding/Decoding Methods
+
+When interacting with a WebAuthn server, you may need to encode or decode the 'id', 'challenge', or other binary data
+fields. Here's how you can use the provided methods:
+
+With single strings:
+
+```php
+use WebauthnEmulator\Authenticator;
+
+// Example of recoding a standard base64 string to base64url
+echo Authenticator::base64Normal2Url('wib1OPW9EkDeiwUoyTgJ1+PpFG4dljeXodqRX15DG+gBAAAABQ=='); 
+// Output: wib1OPW9EkDeiwUoyTgJ1-PpFG4dljeXodqRX15DG-gBAAAABQ
+
+// Example of recoding a base64url string to standard base64
+echo Authenticator::base64Url2Normal('wib1OPW9EkDeiwUoyTgJ1-PpFG4dljeXodqRX15DG-gBAAAABQ');
+// Output: wib1OPW9EkDeiwUoyTgJ1+PpFG4dljeXodqRX15DG+gBAAAABQ==
+```
+
+With arrays:
+
+```php
+use WebauthnEmulator\Authenticator;
+
+$input = [
+    "id" => "HB_PkyggPmHCHbcYyQCfLXTakdmq3WGCcOBjLQK3WkA", // already base64url-encoded
+    "rawId" => "HB/PkyggPmHCHbcYyQCfLXTakdmq3WGCcOBjLQK3WkA=", // standard base64
+];
+
+// Example of recoding an array of standard base64 strings to base64url
+$base64urlArray = Authenticator::base64Normal2Url($input);
+/* Result:
+[
+  "id" => "HB_PkyggPmHCHbcYyQCfLXTakdmq3WGCcOBjLQK3WkA", // left as is
+  "rawId" => "HB_PkyggPmHCHbcYyQCfLXTakdmq3WGCcOBjLQK3WkA", // recoded to base64url
+]
+*/ 
+
+
+// Example of recoding an array of base64url to standard base64
+$base64Array = Authenticator::base64Url2Normal($input);
+/* Result:
+[
+  "id" => "HB/PkyggPmHCHbcYyQCfLXTakdmq3WGCcOBjLQK3WkA=", // recoded to standard base64
+  "rawId" => "HB/PkyggPmHCHbcYyQCfLXTakdmq3WGCcOBjLQK3WkA=", // left as is
+]
+*/
+```
+
+By using these methods, you can ensure that the data you send and receive from WebAuthn servers is correctly encoded,
+regardless of the server's specific implementation details.
+
 ## More Examples
 
 For more detailed examples of how to use `webauthn-emulator` to simulate WebAuthn registration and authentication
 processes, refer to the [examples](examples) directory in the repository:
 
-- [webauthnio_reg.php](examples/webauthnio_reg.php): Registration process with a webauthn.io demo server.
-- [webauthnio_login.php](examples/webauthnio_login.php): Login process with a webauthn.io demo server.
-- [yubico_reg.php](examples/yubico_reg.php): Registration process with a Yubico demo server.
-- [yubico_login.php](examples/yubico_login.php): Login process with a Yubico demo server.
+- [webauthnio_reg.php](examples/webauthnio_reg.php): Registration with a webauthn.io demo server.
+- [webauthnio_login.php](examples/webauthnio_login.php): Login with a webauthn.io demo server.
+- [yubico_reg.php](examples/yubico_reg.php): Registration with a Yubico demo server (non-standard query structure).
+- [yubico_login.php](examples/yubico_login.php): Login with a Yubico demo server (non-standard query structure).
+- [lubuch_reg.php](examples/lubuch_reg.php): Registration with a Lubu.ch demo server (non-standard base64url/binary
+  encoding).
+- [lubuch_login.php](examples/lubuch_login.php): Login with a Lubu.ch demo server (non-standard base64url/binary
+  encoding).
+- [quadoio_reg.php](examples/quadoio_reg.php): Registration with a Quado demo server (custom origins and additional
+  data).
+- [quadoio_login.php](examples/quadoio_login.php): Login with a Quado demo server (custom origins and additional data).
 
-These examples provide a comprehensive guide on constructing full registration and authentication payloads and
-interacting with WebAuthn servers.
+Each server has its own peculiarities, so the examples demonstrate how to handle different scenarios, such as
+non-standard base64url encoding, custom origins, and additional data.
 
 ## Storing Credentials
 
@@ -143,7 +347,7 @@ Here's an example of using the provided `FileRepository`:
 use WebauthnEmulator\CredentialRepository\FileRepository;
 
 // Path to the JSON file that will store the credentials
-$storagePath = 'path/to/credential/storage.json';
+$storagePath = 'path/to/credential/storage.txt';
 
 // Create a new FileRepository instance
 $storage = new FileRepository($storagePath);
@@ -183,31 +387,22 @@ $authenticator = new Authenticator($customStorage);
 This flexibility allows you to integrate the `webauthn-emulator` with various storage backends, such as databases or
 cloud storage solutions, depending on your application's requirements.
 
-## Supported Features and Limitations
+## Limitations
 
 `webauthn-emulator` is designed to support the core functionalities required for WebAuthn registration and
-authentication. However, there are some limitations to be aware of.
-
-### Supported Features:
-
-- Emulation of WebAuthn registration (attestation) and authentication (assertion) processes.
-- Generation of attestation and assertion objects according to the WebAuthn specification.
-- Flexible integration with custom credential repositories for storing keys.
-
-### Limitations:
+authentication. However, there are some limitations to be aware of:
 
 - The emulator currently supports only the 'none' attestation format. Other formats like 'packed', 'tpm',
   'android-safetynet', etc., are not supported.
-- The library is limited to the ES256 signing algorithm for public key credentials. Other algorithms like RS256 or EdDSA
-  are not currently supported. If you need support for other algorithms, please open an issue or submit a pull request.
-- The emulator does not simulate the full range of authenticator capabilities, such as user presence or user
-  verification checks.
+- The library is limited to the ES256 (alg: -7) signing algorithm for public key credentials. Other algorithms like
+  RS256 or EdDSA are not currently supported. If you need support for other algorithms, please open an issue or submit a
+  pull request.
 
 ## Contributing and Reporting Issues
 
-We welcome contributions to the `webauthn-emulator`. If you'd like to contribute or have found a bug, please submit a
-pull request or report an issue on the project's GitHub repository. When contributing, ensure your code follows the
-project's existing style for consistency.
+Contributions are welcome! If you'd like to contribute or have found a bug, please submit a pull request or report an
+issue on the project's GitHub repository. When contributing, ensure your code follows the project's existing style for
+consistency.
 
 For feature requests or bug reports, please check
 the [GitHub Issues](https://github.com/pronin/webauthn-emulator/issues) to see if it has already been reported. If not,

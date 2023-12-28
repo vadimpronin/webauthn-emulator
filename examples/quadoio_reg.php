@@ -158,13 +158,8 @@ echo "\n\nattestation\n" . json_encode($attestation, JSON_PRETTY_PRINT) . "\n\n"
 // Registration step 2 (send attestation to server)
 $registrationFinishUrl = 'https://api.quado.io/webauthn/api/v1/registrations';
 $registrationFinishRequest = [
-    'fido_response' => $attestation,
+    'fido_response' => Authenticator::base64Normal2Url($attestation),
 ];
-
-// urlsafe base64
-$registrationFinishRequest['fido_response']['rawId'] = str_replace(['+', '/', '='], ['-', '_', ''], $registrationFinishRequest['fido_response']['rawId']);
-$registrationFinishRequest['fido_response']['response']['attestationObject'] = str_replace(['+', '/', '='], ['-', '_', ''], $registrationFinishRequest['fido_response']['response']['attestationObject']);
-$registrationFinishRequest['fido_response']['response']['clientDataJSON'] = str_replace(['+', '/', '='], ['-', '_', ''], $registrationFinishRequest['fido_response']['response']['clientDataJSON']);
 
 $registrationFinishResponse = $httpClient
     ->patch($registrationFinishUrl, ['json' => $registrationFinishRequest])

@@ -126,6 +126,4 @@ $registrationFinishResponse = json_decode($registrationFinishResponse, true);
 
 if ($registrationFinishResponse['success'] === true) {
     echo "User $username registered successfully\n";
-} else {
-    dump($registrationFinishResponse);
 }

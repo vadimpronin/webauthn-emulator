@@ -102,17 +102,9 @@ echo "\n\nassertion\n" . json_encode($assertion, JSON_PRETTY_PRINT) . "\n\n";
 // Login step 2 (send attestation to server)
 $loginFinishUrl = 'https://api.quado.io/webauthn/api/v1/authentications';
 
-// {"fido_response":{"rawId":"70oe69_xNFx16Lw-Uq40Si2kaD-p0LYcoK-fCrxP-tY","response":{"authenticatorData":"E4Mf1Uogz5Gwtvu4tANTrL1cSUjdn5CvDL8Kk18IGJMBAAAAAA","signature":"MEQCIA-spRgvPfF_m0E-F41K0Gkfi7ZoxqJhROKAb5glxN-YAiA4kChZLKpGhlrwJuT9K_iLRARzOe1yIyB1lEfJ2ahpcw","userHandle":"OTJkZTc3NTMtMDZkNy00ZTIyLWJkYzAtNDk3MTAzMjIwNmFj","clientDataJSON":"eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoiUE5UcjFoZ2QxVmh3b2RfV1JsZldlb25DWDdZek02dF9EZ292My1PNEYzdyIsIm9yaWdpbiI6Imh0dHBzOi8vZGVtby5xdWFkby5pbyIsImNyb3NzT3JpZ2luIjpmYWxzZX0"},"authenticatorAttachment":"platform","getClientExtensionResults":{},"id":"70oe69_xNFx16Lw-Uq40Si2kaD-p0LYcoK-fCrxP-tY","type":"public-key"}}
 $loginFinishRequest = [
-    'fido_response' => $assertion,
+    'fido_response' => Authenticator::base64Normal2Url($assertion),
 ];
-
-// urlsafe base64
-$loginFinishRequest['fido_response']['rawId'] = str_replace(['+', '/', '='], ['-', '_', ''], $loginFinishRequest['fido_response']['rawId']);
-$loginFinishRequest['fido_response']['response']['authenticatorData'] = str_replace(['+', '/', '='], ['-', '_', ''], $loginFinishRequest['fido_response']['response']['authenticatorData']);
-$loginFinishRequest['fido_response']['response']['clientDataJSON'] = str_replace(['+', '/', '='], ['-', '_', ''], $loginFinishRequest['fido_response']['response']['clientDataJSON']);
-$loginFinishRequest['fido_response']['response']['signature'] = str_replace(['+', '/', '='], ['-', '_', ''], $loginFinishRequest['fido_response']['response']['signature']);
-$loginFinishRequest['fido_response']['response']['userHandle'] = str_replace(['+', '/', '='], ['-', '_', ''], $loginFinishRequest['fido_response']['response']['userHandle']);
 
 $loginFinishResponse = $httpClient
     ->patch($loginFinishUrl, ['json' => $loginFinishRequest])

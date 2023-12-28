@@ -37,10 +37,10 @@ class Authenticator implements AuthenticatorInterface
         $credential = $this->createCredential($registerOptions);
 
         $clientDataJson = json_encode([
-            'type' => 'webauthn.create',
-            'challenge' => $registerOptions['challenge'],
-            'origin' => $origin ?? 'https://' . $credential->getRpId(),
-        ] + $extra, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
+                'type' => 'webauthn.create',
+                'challenge' => $registerOptions['challenge'],
+                'origin' => $origin ?? 'https://' . $credential->getRpId(),
+            ] + $extra, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
 
         $attestationObject = new MapObject([
             'fmt' => new MapItem(new TextStringObject('fmt'), new TextStringObject('none')),
@@ -52,7 +52,7 @@ class Authenticator implements AuthenticatorInterface
         ]);
 
         return [
-            'id' => $this->getSafeId($credential->getId()),
+            'id' => static::base64Normal2Url($credential->getId()),
             'rawId' => $credential->getId(),
             'response' => [
                 'clientDataJSON' => base64_encode($clientDataJson),
@@ -87,7 +87,7 @@ class Authenticator implements AuthenticatorInterface
         $this->repository->save($credential);
 
         return [
-            'id' => $this->getSafeId($credential->getId()),
+            'id' => static::base64Normal2Url($credential->getId()),
             'rawId' => $credential->getId(),
             'response' => [
                 'authenticatorData' => base64_encode($authenticatorData),
@@ -120,10 +120,9 @@ class Authenticator implements AuthenticatorInterface
             foreach ($credentialIds as $credentialId) {
                 try {
                     // ensure that we always use the raw credential id
-                    $rawId = $this->getOriginalId($credentialId['id']);
+                    $rawId = static::base64Url2Normal($credentialId['id']);
                     $credential = $this->repository->getById($rpId, $rawId);
-                }
-                catch (CredentialNotFoundException) {
+                } catch (CredentialNotFoundException) {
                     // receive exception if not found, normal case
                     continue;
                 }
@@ -133,8 +132,7 @@ class Authenticator implements AuthenticatorInterface
         } else {
             try {
                 return $this->repository->getById($rpId, null);
-            }
-            catch (CredentialNotFoundException) {
+            } catch (CredentialNotFoundException) {
                 // nothing found, normal case
             }
         }
@@ -158,14 +156,53 @@ class Authenticator implements AuthenticatorInterface
         return $authData;
     }
 
-    protected function getSafeId(string $base64EncodedId): string
+    /**
+     * Recode base64 string or array to base64url
+     * Arrays are recoded recursively
+     */
+    public static function base64Normal2Url(string|array $base64Encoded): string|array
     {
-        return str_replace(['+', '/', '='], ['-', '_', ''], $base64EncodedId);
+        if (is_array($base64Encoded)) {
+            return array_map([static::class, 'base64Normal2Url'], $base64Encoded);
+        }
+
+        // if string has chars other than base64, return as is
+        $found = strspn($base64Encoded, 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=');
+        if ($found !== strlen($base64Encoded)) {
+            return $base64Encoded;
+        }
+
+        $decoded = base64_decode($base64Encoded, true);
+
+        if ($decoded === false) {
+            return $base64Encoded;
+        }
+
+        return str_replace(['+', '/', '='], ['-', '_', ''], $base64Encoded);
     }
 
-    protected function getOriginalId(string $safeId): string
+    /**
+     * Recode base64url or trimmed base64 string or array to non-trimmed base64
+     * Arrays are recoded recursively
+     */
+    public static function base64Url2Normal(string|array $base64urlEncoded): string|array
     {
-        // ensure that we always use the raw credential id, encoded in the same way as the original
-        return base64_encode(base64_decode(str_replace(['-', '_'], ['+', '/'], $safeId)));
+        if (is_array($base64urlEncoded)) {
+            return array_map([static::class, 'base64Url2Normal'], $base64urlEncoded);
+        }
+
+        // if string has chars other than base64url, return as is
+        $found = strspn($base64urlEncoded, 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_');
+        if ($found !== strlen($base64urlEncoded)) {
+            return $base64urlEncoded;
+        }
+
+        $decoded = base64_decode(str_replace(['-', '_'], ['+', '/'], $base64urlEncoded), true);
+
+        if ($decoded === false) {
+            return $base64urlEncoded;
+        }
+
+        return base64_encode($decoded);
     }
 }
