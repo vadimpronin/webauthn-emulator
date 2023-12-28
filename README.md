@@ -1,7 +1,10 @@
-# webauthn-emulator
+# WebAuthn Emulator
+*A simple PHP WebAuthn (FIDO2) client library*
 
 `webauthn-emulator` is a PHP library that emulates WebAuthn-compatible authenticators like YubiKeys, Touch ID, Face ID,
-Windows Hello, etc. It enables developers to integrate WebAuthn client-side authentication into their applications.
+Windows Hello, etc. It essentially simulates the behavior
+of [Web Authentication API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Authentication_API) of a browser,
+allowing the developers to integrate WebAuthn client-side authentication into their applications.
 
 ## Table of Contents
 
@@ -15,9 +18,7 @@ Windows Hello, etc. It enables developers to integrate WebAuthn client-side auth
     - [Base64url vs Base64 Encoding](#base64url-vs-base64-encoding)
 - [More Examples](#more-examples)
 - [Storing Credentials](#storing-credentials)
-- [Supported Features and Limitations](#supported-features-and-limitations)
-    - [Features](#features)
-    - [Limitations](#limitations)
+- [Limitations](#limitations)
 - [Contributing and Reporting Issues](#contributing-and-reporting-issues)
 - [License](#license)
 - [Acknowledgments](#acknowledgments)
@@ -148,8 +149,13 @@ $authenticator = new Authenticator($storage);
 
 ### Registration (Attestation)
 
-The `getAttestation` method generates a response to a WebAuthn registration challenge, simulating the process of
-registering a new authenticator with a WebAuthn relying party.
+The `getAttestation` creates a new key pair and generates a response to a WebAuthn registration challenge, simulating
+the process of registering a new authenticator with a WebAuthn relying party. Its behavior is similar to sequentially
+calling [navigator.credentials.create()](https://developer.mozilla.org/en-US/docs/Web/API/CredentialsContainer/create#web_authentication_api)
+and [navigator.credentials.get()](https://developer.mozilla.org/en-US/docs/Web/API/CredentialsContainer/get#web_authentication_api)
+in the browser. Refer to
+the [Web Authentication API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Authentication_API) documentation for
+more details.
 
 `getAttestation` accepts the following parameters:
 
@@ -157,8 +163,10 @@ registering a new authenticator with a WebAuthn relying party.
   relying party's information, user data, challenge, and other registration options.
 - `origin` (string, optional): The origin of the relying party's website. It defaults to an origin constructed from
   the `rpId` if omitted.
-- `extra` (array, optional): Additional data to include in the `clientDataJSON` object. If omitted, only standard
-  fields are included.
+- `extra` (array, optional): Additional data to include in the `clientDataJSON` object. If omitted, only `type`, `origin`,
+  and `challenge` are included.
+
+Returns an array similar to [PublicKeyCredential](https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredential),
 
 ```php
 $registrationChallenge = [
@@ -190,7 +198,8 @@ echo(json_encode($attestation, JSON_PRETTY_PRINT));
 ### Authentication (Assertion)
 
 The `getAssertion` method generates a response to a WebAuthn authentication challenge, simulating the process of logging
-in with a previously registered authenticator.
+in with a previously registered key. Its behavior is similar to calling the
+browser's [navigator.credentials.get()](https://developer.mozilla.org/en-US/docs/Web/API/CredentialsContainer/get#web_authentication_api).
 
 `getAssertion` accepts the following parameters:
 
@@ -202,8 +211,13 @@ in with a previously registered authenticator.
   attacks.
 - `origin` (string, optional): The origin of the relying party's website. It defaults to an origin constructed from
   the `rpId` if omitted.
-- `extra` (array, optional): Additional data to include in the `clientDataJSON` object. If omitted, only standard
-  fields are included.
+- `extra` (array, optional): Additional data to include in the `clientDataJSON` object. If omitted, only `type`, `origin`,
+  and `challenge` are included.
+
+Returns an array similar to [PublicKeyCredential](https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredential),
+the output
+of [navigator.credentials.get()](https://developer.mozilla.org/en-US/docs/Web/API/CredentialsContainer/get#web_authentication_api)
+in the browser.
 
 ```php
 $authChallenge = [
@@ -236,10 +250,6 @@ echo(json_encode($assertion, JSON_PRETTY_PRINT));
 */
 
 ```
-
-The `origin` parameter should match the origin of the WebAuthn relying party. The `extra` parameter is an associative
-array that allows you to include additional data in the `clientDataJSON` object for both registration and authentication
-operations. These parameters are optional and can be omitted if not required for your use case.
 
 ### Base64url vs Base64 Encoding
 
@@ -405,7 +415,7 @@ issue on the project's GitHub repository. When contributing, ensure your code fo
 consistency.
 
 For feature requests or bug reports, please check
-the [GitHub Issues](https://github.com/pronin/webauthn-emulator/issues) to see if it has already been reported. If not,
+the [GitHub Issues](https://github.com/vadimpronin/webauthn-emulator/issues) to see if it has already been reported. If not,
 create a new issue with a detailed description.
 
 ## License
@@ -415,5 +425,5 @@ file in the repository.
 
 ## Acknowledgments
 
-Special thanks to Rayaz Sultanov ([Rayazik](https://github.com/Rayazik)) for co-creating `webauthn-emulator`.
+Special thanks to Rayaz Sultanov ([codeproger](https://github.com/codeproger)) for co-creating `webauthn-emulator`.
 
