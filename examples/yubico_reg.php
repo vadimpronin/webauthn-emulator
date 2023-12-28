@@ -1,4 +1,6 @@
 <?php
+/** @noinspection DuplicatedCode */
+/** @noinspection PhpUnhandledExceptionInspection */
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Cookie\FileCookieJar;
@@ -7,14 +9,12 @@ use WebauthnEmulator\CredentialRepository\FileRepository;
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
-$storage = new FileRepository('./key_storage.json');
+$storage = new FileRepository('./key_storage.txt');
+$authenticator = new Authenticator($storage);
 
 $httpClient = new Client([
     'cookies' => new FileCookieJar('./cookies.json', true),
 ]);
-
-$authenticator = new Authenticator($storage);
-
 
 // Registration step 1 (request challenge from server)
 $registrationInitUrl = 'https://demo.yubico.com/api/v1/simple/webauthn/register-begin';
@@ -23,6 +23,7 @@ $registrationInitResponse = $httpClient
     ->post($registrationInitUrl, ['json' => $registrationInitRequest])
     ->getBody()
     ->getContents();
+echo "\n\nregistrationInitResponse\n" . json_encode(json_decode($registrationInitResponse), JSON_PRETTY_PRINT) . "\n\n";
 $registrationInitResponse = json_decode($registrationInitResponse, true);
 
 /* Example response from Yubico demo server:
@@ -37,7 +38,7 @@ $registrationInitResponse = json_decode($registrationInitResponse, true);
                 "userVerification": "discouraged"
             },
             "challenge": {
-                "$base64": "hyb+EYjogAdsDyk36waHO4\/sEEexjxMubvvITc6xtaE="
+                "$base64": "2bqwwIuyA0MermB31MxYAChfQkvEZ9hn8TN60BQnqPE="
             },
             "excludeCredentials": [],
             "pubKeyCredParams": [
@@ -58,12 +59,12 @@ $registrationInitResponse = json_decode($registrationInitResponse, true);
             "user": {
                 "displayName": "Yubico demo user",
                 "id": {
-                    "$base64": "3fAy6Clt4qL\/DMW23yIOG55oLxqwXvgHPKCkAeUstP0="
+                    "$base64": "1EIEsZR1HYIMg+RrtSlJX453H4jhgPyyt8nPxMeOZEk="
                 },
                 "name": "Yubico demo user"
             }
         },
-        "requestId": "4e526585-2727-4a45-bc89-7ce0e9e2ad8c",
+        "requestId": "d66e2f20-668b-4271-8649-a219029e3e4c",
         "username": "Yubico demo user"
     },
     "status": "success"
@@ -85,15 +86,16 @@ $registrationInitResponse['attestation'] = 'none';
 
 // Generate attestation (response to challenge)
 $attestation = $authenticator->getAttestation($registrationInitResponse);
+echo "\n\nattestation\n" . json_encode($attestation, JSON_PRETTY_PRINT) . "\n\n";
 
 /* Example attestation:
 
 {
-    "id": "3YGXVngtu2VrTsncbWYWbuqHNBHa-apF_NloxvfodhY",
-    "rawId": "3YGXVngtu2VrTsncbWYWbuqHNBHa+apF\/NloxvfodhY=",
+    "id": "7XmgI6qm08kAS3jbcQNDCCo6Y3Vu65VrfHCLXxQq--k",
+    "rawId": "7XmgI6qm08kAS3jbcQNDCCo6Y3Vu65VrfHCLXxQq++k=",
     "response": {
-        "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiaHliK0VZam9nQWRzRHlrMzZ3YUhPNC9zRUVleGp4TXVidnZJVGM2eHRhRT0iLCJvcmlnaW4iOiJodHRwczovL2RlbW8ueXViaWNvLmNvbSJ9",
-        "attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikxGzvgq0bVGR3WR0Aiwh1nsPm0uy085R0v+ppaZJdA7dBAAAAAAAAAAAAAAAAAAAAAAAAAAAAIN2Bl1Z4Lbtla07J3G1mFm7qhzQR2vmqRfzZaMb36HYWpQECAyYgASFYIAdxNDVyO4joVSuxks08ZT6e9Fe1g6bhfdIG3XKxIDqFIlggjS0\/ahCPecxVz6YEqZ3yodDXb48ZPezlIcmoVl+2Vjg="
+        "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiMmJxd3dJdXlBME1lcm1CMzFNeFlBQ2hmUWt2RVo5aG44VE42MEJRbnFQRT0iLCJvcmlnaW4iOiJodHRwczovL2RlbW8ueXViaWNvLmNvbSJ9",
+        "attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikxGzvgq0bVGR3WR0Aiwh1nsPm0uy085R0v+ppaZJdA7dBAAAAAAAAAAAAAAAAAAAAAAAAAAAAIO15oCOqptPJAEt423EDQwgqOmN1buuVa3xwi18UKvvppQECAyYgASFYIMG4fLDu9Ir5sJ\/d60Xmbsq\/zfLez57OCD\/MhO1wM4aAIlggOuqFMoMYBoO4SqcQhgux1owd5S8LfxlEnfQMNeCuUKo="
     },
     "type": "public-key"
 }
@@ -120,6 +122,7 @@ $registrationFinishResponse = $httpClient
     ->post($registrationFinishUrl, ['json' => $registrationFinishRequest])
     ->getBody()
     ->getContents();
+echo "\n\nregistrationFinishResponse\n" . json_encode(json_decode($registrationFinishResponse), JSON_PRETTY_PRINT) . "\n\n";
 $registrationFinishResponse = json_decode($registrationFinishResponse, true);
 
 /* Example response:
@@ -133,15 +136,15 @@ $registrationFinishResponse = json_decode($registrationFinishResponse, true);
                         "$base64": "AAAAAAAAAAAAAAAAAAAAAA=="
                     },
                     "credentialId": {
-                        "$base64": "3YGXVngtu2VrTsncbWYWbuqHNBHa+apF\/NloxvfodhY="
+                        "$base64": "7XmgI6qm08kAS3jbcQNDCCo6Y3Vu65VrfHCLXxQq++k="
                     },
                     "publicKey": {
                         "-1": 1,
                         "-2": {
-                            "$base64": "B3E0NXI7iOhVK7GSzTxlPp70V7WDpuF90gbdcrEgOoU="
+                            "$base64": "wbh8sO70ivmwn93rReZuyr\/N8t7Pns4IP8yE7XAzhoA="
                         },
                         "-3": {
-                            "$base64": "jS0\/ahCPecxVz6YEqZ3yodDXb48ZPezlIcmoVl+2Vjg="
+                            "$base64": "OuqFMoMYBoO4SqcQhgux1owd5S8LfxlEnfQMNeCuUKo="
                         },
                         "1": 2,
                         "3": -7
@@ -162,7 +165,7 @@ $registrationFinishResponse = json_decode($registrationFinishResponse, true);
             "fmt": "none"
         },
         "clientData": {
-            "$base64": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiaHliK0VZam9nQWRzRHlrMzZ3YUhPNC9zRUVleGp4TXVidnZJVGM2eHRhRT0iLCJvcmlnaW4iOiJodHRwczovL2RlbW8ueXViaWNvLmNvbSJ9"
+            "$base64": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiMmJxd3dJdXlBME1lcm1CMzFNeFlBQ2hmUWt2RVo5aG44VE42MEJRbnFQRT0iLCJvcmlnaW4iOiJodHRwczovL2RlbW8ueXViaWNvLmNvbSJ9"
         },
         "device": {
             "name": "Unknown device",

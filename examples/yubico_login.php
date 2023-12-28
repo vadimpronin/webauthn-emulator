@@ -1,4 +1,6 @@
 <?php
+/** @noinspection DuplicatedCode */
+/** @noinspection PhpUnhandledExceptionInspection */
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Cookie\FileCookieJar;
@@ -7,13 +9,12 @@ use WebauthnEmulator\CredentialRepository\FileRepository;
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
-$storage = new FileRepository('./key_storage.json');
+$storage = new FileRepository('./key_storage.txt');
+$authenticator = new Authenticator($storage);
 
 $httpClient = new Client([
     'cookies' => new FileCookieJar('./cookies.json', true),
 ]);
-
-$authenticator = new Authenticator($storage);
 
 // Login step 1 (request challenge from server)
 $authenticationInitUrl = 'https://demo.yubico.com/api/v1/simple/webauthn/authenticate-begin';
@@ -22,6 +23,7 @@ $authenticationInitResponse = $httpClient
     ->post($authenticationInitUrl, ['json' => $authenticationInitRequest])
     ->getBody()
     ->getContents();
+echo "\n\nauthenticationInitResponse\n" . json_encode(json_decode($authenticationInitResponse), JSON_PRETTY_PRINT) . "\n\n";
 $authenticationInitResponse = json_decode($authenticationInitResponse, true);
 
 /* Example response from Yubico demo server:
@@ -31,19 +33,19 @@ $authenticationInitResponse = json_decode($authenticationInitResponse, true);
             "allowCredentials": [
                 {
                     "id": {
-                        "$base64": "BZUtmf2Nq8iAhis0P\/1ys1qKeQfHPZnEldkLAIeaG2E="
+                        "$base64": "7XmgI6qm08kAS3jbcQNDCCo6Y3Vu65VrfHCLXxQq++k="
                     },
                     "type": "public-key"
                 }
             ],
             "challenge": {
-                "$base64": "AXty\/2y9gnlLIBbzr4MMKWUEBl1AjuGhD2nuVBhW5aE="
+                "$base64": "6cxgmdGxM1bXiFsAQ8uperJMjEn\/36UOKIMgXcCfeRI="
             },
             "rpId": "demo.yubico.com",
             "timeout": 600000,
             "userVerification": "discouraged"
         },
-        "requestId": "433e58d7-44d0-47e1-8907-5a24f0086167",
+        "requestId": "1128057f-c63c-4e07-bbbc-d596206ab3b3",
         "username": "Yubico demo user"
     },
     "status": "success"
@@ -65,21 +67,20 @@ $assertion = $authenticator->getAssertion(
     $allowCredentials,
     $authenticationInitResponse['data']['publicKey']['challenge']['$base64'],
 );
+echo "\n\nassertion\n" . json_encode($assertion, JSON_PRETTY_PRINT) . "\n\n";
 
 /* Example assertion:
-
 {
-    "id": "BZUtmf2Nq8iAhis0P%2F1ys1qKeQfHPZnEldkLAIeaG2E%3D",
-    "rawId": "BZUtmf2Nq8iAhis0P\/1ys1qKeQfHPZnEldkLAIeaG2E=",
+    "id": "7XmgI6qm08kAS3jbcQNDCCo6Y3Vu65VrfHCLXxQq--k",
+    "rawId": "7XmgI6qm08kAS3jbcQNDCCo6Y3Vu65VrfHCLXxQq++k=",
     "response": {
-        "authenticatorData": "xGzvgq0bVGR3WR0Aiwh1nsPm0uy085R0v+ppaZJdA7cBAAAAAQ==",
-        "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoiQVh0eS8yeTlnbmxMSUJienI0TU1LV1VFQmwxQWp1R2hEMm51VkJoVzVhRT0iLCJvcmlnaW4iOiJodHRwczovL2RlbW8ueXViaWNvLmNvbSJ9",
-        "signature": "MEUCIQCeRAXgSvAc\/\/dp+I3zi+WHxn\/7ym3BcRZIzH4VuydkhQIgY8fjRF3pd8E2\/ELxQJts\/yhT1iho21DM8Zhd2fZ9fbg=",
-        "userHandle": "\/5cLEQmaS\/0cAEHxtjdP70Atbk\/7Mj9AtlD8crb3xdM="
+        "authenticatorData": "xGzvgq0bVGR3WR0Aiwh1nsPm0uy085R0v+ppaZJdA7cBAAAAAA==",
+        "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoiNmN4Z21kR3hNMWJYaUZzQVE4dXBlckpNakVuLzM2VU9LSU1nWGNDZmVSST0iLCJvcmlnaW4iOiJodHRwczovL2RlbW8ueXViaWNvLmNvbSJ9",
+        "signature": "MEQCIDPT12ZhEDZMsrNbafpW+S+pmJSDntUYAyDbphkPp6OEAiBGGsuy7vh6eY2G1+ZoJo1s\/nN7wT435b9cAuk7Ptt5Uw==",
+        "userHandle": "1EIEsZR1HYIMg+RrtSlJX453H4jhgPyyt8nPxMeOZEk="
     },
     "type": "public-key"
 }
-
 */
 
 
@@ -106,7 +107,7 @@ $loginFinishResponse = $httpClient
     ->post($loginFinishUrl, ['json' => $loginFinishRequest])
     ->getBody()
     ->getContents();
-
+echo "\n\nloginFinishResponse\n" . json_encode(json_decode($loginFinishResponse), JSON_PRETTY_PRINT) . "\n\n";
 $loginFinishResponse = json_decode($loginFinishResponse, true);
 
 /* Example response:
@@ -119,15 +120,15 @@ $loginFinishResponse = json_decode($loginFinishResponse, true);
                         "$base64": "AAAAAAAAAAAAAAAAAAAAAA=="
                     },
                     "credentialId": {
-                        "$base64": "BZUtmf2Nq8iAhis0P\/1ys1qKeQfHPZnEldkLAIeaG2E="
+                        "$base64": "7XmgI6qm08kAS3jbcQNDCCo6Y3Vu65VrfHCLXxQq++k="
                     },
                     "publicKey": {
                         "-1": 1,
                         "-2": {
-                            "$base64": "9cGUinxuZ2NdjLQpdphvS6EuhLQlk84ZMkyCya+E2\/c="
+                            "$base64": "wbh8sO70ivmwn93rReZuyr\/N8t7Pns4IP8yE7XAzhoA="
                         },
                         "-3": {
-                            "$base64": "hC8Tf0s8bqHr70+3X9toGhGrVek3HTtBRzufG52kGYc="
+                            "$base64": "OuqFMoMYBoO4SqcQhgux1owd5S8LfxlEnfQMNeCuUKo="
                         },
                         "1": 2,
                         "3": -7
@@ -143,10 +144,10 @@ $loginFinishResponse = json_decode($loginFinishResponse, true);
                 "rpIdHash": {
                     "$base64": "xGzvgq0bVGR3WR0Aiwh1nsPm0uy085R0v+ppaZJdA7c="
                 },
-                "signatureCounter": 1
+                "signatureCounter": 0
             },
             "clientData": {
-                "challenge": "AXty\/2y9gnlLIBbzr4MMKWUEBl1AjuGhD2nuVBhW5aE=",
+                "challenge": "6cxgmdGxM1bXiFsAQ8uperJMjEn\/36UOKIMgXcCfeRI=",
                 "origin": "https:\/\/demo.yubico.com",
                 "type": "webauthn.get"
             }

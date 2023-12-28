@@ -2,9 +2,7 @@
 
 namespace WebauthnEmulator\CredentialRepository;
 
-use JsonException;
 use RuntimeException;
-use WebauthnEmulator\CredentialFactory;
 use WebauthnEmulator\CredentialInterface;
 use WebauthnEmulator\Exceptions\CredentialNotFoundException;
 
@@ -13,11 +11,8 @@ use WebauthnEmulator\Exceptions\CredentialNotFoundException;
  */
 class FileRepository implements RepositoryInterface
 {
-    private array $currentState;
+    protected array $credentials = [];
 
-    /**
-     * @throws JsonException
-     */
     public function __construct(
         private string $storagePath
     )
@@ -31,20 +26,16 @@ class FileRepository implements RepositoryInterface
         }
 
         $storageContent = file_get_contents($this->storagePath);
-        $this->currentState = $storageContent === '' ? [] : json_decode($storageContent, true, 512, JSON_THROW_ON_ERROR);
-    }
-
-    /**
-     * @throws JsonException
-     */
-    public function __destruct()
-    {
-        file_put_contents($this->storagePath, json_encode($this->currentState, JSON_THROW_ON_ERROR));
+        if (!empty($storageContent)) {
+            $this->credentials = unserialize($storageContent, ["allowed_classes" => true]);
+        }
     }
 
     public function save(CredentialInterface $credential): static
     {
-        $this->currentState[$credential->getRpId()][$credential->getId()] = $credential->toArray();
+        $this->credentials[$credential->getRpId()][$credential->getId()] = $credential;
+        file_put_contents($this->storagePath, serialize($this->credentials));
+
         return $this;
     }
 
@@ -55,7 +46,7 @@ class FileRepository implements RepositoryInterface
      */
     public function get(string $rpId): array
     {
-        return $this->currentState[$rpId] ?? [];
+        return $this->credentials[$rpId] ?? [];
     }
 
     /**
@@ -63,14 +54,11 @@ class FileRepository implements RepositoryInterface
      */
     public function getById(string $rpId, string $id): CredentialInterface
     {
-        $credentialData = $this->currentState[$rpId][$id] ?? null;
-        if (null === $credentialData) {
+        $credential = $this->credentials[$rpId][$id] ?? null;
+        if ($credential === null) {
             throw new CredentialNotFoundException('credential not found');
         }
 
-        $credential = CredentialFactory::makeFromArray($credentialData);
-
-        $credential->incrementSignCount();
         return $credential;
     }
 }

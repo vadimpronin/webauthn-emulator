@@ -3,3 +3,5 @@ vendor/
 composer.lock
 tmp/
 *.sh
+cookies.json
+key_storage.txt

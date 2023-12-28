@@ -22,6 +22,20 @@ class Credential implements CredentialInterface
     ) {
     }
 
+    public function __serialize(): array
+    {
+        return $this->toArray();
+    }
+
+    public function __unserialize(array $data): void
+    {
+        $this->id = $data['id'];
+        $this->privateKey = openssl_pkey_get_private($data['privateKey']);
+        $this->rpId = $data['rpId'];
+        $this->userHandle = $data['userHandle'];
+        $this->signCount = $data['signCount'];
+    }
+
     public function getCoseKey(): string
     {
         $keyDetails = openssl_pkey_get_details($this->privateKey);

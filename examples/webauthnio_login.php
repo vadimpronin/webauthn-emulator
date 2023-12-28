@@ -1,4 +1,6 @@
 <?php
+/** @noinspection DuplicatedCode */
+/** @noinspection PhpUnhandledExceptionInspection */
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Cookie\FileCookieJar;
@@ -7,17 +9,16 @@ use WebauthnEmulator\CredentialRepository\FileRepository;
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
-$storage = new FileRepository('./key_storage.json');
+$storage = new FileRepository('./key_storage.txt');
+$authenticator = new Authenticator($storage);
 
 $httpClient = new Client([
     'cookies' => new FileCookieJar('./cookies.json', true),
 ]);
 
-$authenticator = new Authenticator($storage);
-
 // pseudo-random username based on hostname
 $username = 'test_' . substr(md5('webauthn' . gethostname()), 0, 8);
-echo "Login username: $username\n";
+echo "Username: $username\n";
 
 // Login step 0 (get session id cookie)
 $httpClient->get('https://webauthn.io');
@@ -32,30 +33,27 @@ $authenticationInitResponse = $httpClient
     ->post($authenticationInitUrl, ['json' => $authenticationInitRequest])
     ->getBody()
     ->getContents();
+echo "\n\nauthenticationInitResponse\n" . json_encode(json_decode($authenticationInitResponse), JSON_PRETTY_PRINT) . "\n\n";
 $authenticationInitResponse = json_decode($authenticationInitResponse, true);
 
-/* Example response:
+/* Example response from webauthn.io:
 {
-   "challenge":"RzckEwPCCFGmO-lkYs_z15YCKAsEcoW49X2DSuuCzL2b6iXjozuap5iVnWzenmfhbsTs0-mqKOwkvhbk8uDbRw",
-   "timeout":60000,
-   "rpId":"webauthn.io",
-   "allowCredentials":[
-      {
-         "id":"2h0MoJD7Slojb_SecLOCfKyMDnC-mEDnFeYLTAefaz4",
-         "type":"public-key",
-         "transports":[
-
-         ]
-      },
-      {
-         "id":"ySHAlkz_D3-MTo2GZwXNRhDVdDLR23oQaSI3cGz-7Hc",
-         "type":"public-key",
-         "transports":[
-
-         ]
-      }
-   ],
-   "userVerification":"preferred"
+    "challenge": "C3It6TxHHOLd6qP_XN9Rt-qBsLUClus0YDuZXOSA8ewdRQRn5qm0cgpRQfR_lrz_CytOS4ryY7qRYQ2KD51M-A",
+    "timeout": 60000,
+    "rpId": "webauthn.io",
+    "allowCredentials": [
+        {
+            "id": "2h0MoJD7Slojb_SecLOCfKyMDnC-mEDnFeYLTAefaz4",
+            "type": "public-key",
+            "transports": []
+        },
+        {
+            "id": "AiMGnemw3W__9R7qxOE_qhm1IRjETv5hagTUAaALlC8",
+            "type": "public-key",
+            "transports": []
+        }
+    ],
+    "userVerification": "preferred"
 }
 */
 
@@ -66,19 +64,20 @@ $assertion = $authenticator->getAssertion(
     $authenticationInitResponse['allowCredentials'],
     $authenticationInitResponse['challenge']
 );
+echo "\n\nassertion\n" . json_encode($assertion, JSON_PRETTY_PRINT) . "\n\n";
 
-/* Example attestation:
-
+/* Example assertion:
 {
-    "id": "sKuFSbP7ZK0NIjgKhoWrOX5sSJBLvVvhIUHPwYsuUVg",
-    "rawId": "sKuFSbP7ZK0NIjgKhoWrOX5sSJBLvVvhIUHPwYsuUVg=",
+    "id": "AiMGnemw3W__9R7qxOE_qhm1IRjETv5hagTUAaALlC8",
+    "rawId": "AiMGnemw3W\/\/9R7qxOE\/qhm1IRjETv5hagTUAaALlC8=",
     "response": {
-        "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiN0JZTEFpTE1lTm0zMTAzWkJtQklIeEVJLTUtT181dVd0a2FOV0M0b1R6UjQ3S3RGTGZzN295MGkwcUNKM0EtRU5wdnNOTWJkV2JrSEd2Y0ZaeWhCWlEiLCJvcmlnaW4iOiJodHRwczovL3dlYmF1dGhuLmlvIn0=",
-        "attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikdKbqkhPJnC90siSSsyDPQCYqlMGpUKA5fyklC2CEHvBBAAAAAAAAAAAAAAAAAAAAAAAAAAAAILCrhUmz+2StDSI4CoaFqzl+bEiQS71b4SFBz8GLLlFYpQECAyYgASFYIBOwQof249qcQXF9yVDuqwgUDd9c7cD0LMmrmgqYpuNXIlgg4gzdJgb0tesv0UcfW31NsIXM6AuGqLYJIjjgKoA8sVg="
+        "authenticatorData": "dKbqkhPJnC90siSSsyDPQCYqlMGpUKA5fyklC2CEHvABAAAAAQ==",
+        "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoiQzNJdDZUeEhIT0xkNnFQX1hOOVJ0LXFCc0xVQ2x1czBZRHVaWE9TQThld2RSUVJuNXFtMGNncFJRZlJfbHJ6X0N5dE9TNHJ5WTdxUllRMktENTFNLUEiLCJvcmlnaW4iOiJodHRwczovL3dlYmF1dGhuLmlvIn0=",
+        "signature": "MEUCIAREoVd0Fj33a1\/iudefMlXE4HyIGZJAngNdeU8oeWKEAiEAquqA99iwzIpFOq9cE8qDIRU42xR0Q9q9hdHCt2dHuHY=",
+        "userHandle": "dGVzdF85YjMyYzczNw"
     },
     "type": "public-key"
 }
-
 */
 
 
@@ -92,11 +91,15 @@ $loginFinishResponse = $httpClient
     ->post($loginFinishUrl, ['json' => $loginFinishRequest])
     ->getBody()
     ->getContents();
-
+echo "\n\nloginFinishResponse\n" . json_encode(json_decode($loginFinishResponse), JSON_PRETTY_PRINT) . "\n\n";
 $loginFinishResponse = json_decode($loginFinishResponse, true);
 
-/* Example response: {"verified": true} */
+/* Example response:
+{
+    "verified": true
+}
+ */
 
 if ($loginFinishResponse['verified'] === true) {
-    echo"User $username registered successfully\n";
+    echo"User $username logged in successfully\n";
 }

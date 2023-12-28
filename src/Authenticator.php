@@ -66,7 +66,7 @@ class Authenticator implements AuthenticatorInterface
      * @throws JsonException
      */
     #[ArrayShape(['id' => "string", 'rawId' => "string", 'response' => ['authenticatorData' => "string", 'clientDataJSON' => "string", 'signature' => "string", 'userHandle' => "string"], 'type' => "string"])]
-    public function getAssertion(string $rpId, string|array|null $credentialIds, string $challenge): array
+    public function getAssertion(string $rpId, string|array|null $credentialIds, string $challenge, ?string $origin = null, array $extra = []): array
     {
         $credential = $this->getCredential($rpId, $credentialIds);
 
@@ -74,7 +74,7 @@ class Authenticator implements AuthenticatorInterface
         $clientDataJson = json_encode([
             'type' => 'webauthn.get',
             'challenge' => $challenge,
-            'origin' => 'https://' . $credential->getRpId(),
+            'origin' => $origin ?? 'https://' . $credential->getRpId(),
         ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
         $clientDataHash = hash('sha256', $clientDataJson, true);
 
@@ -82,6 +82,9 @@ class Authenticator implements AuthenticatorInterface
         $authenticatorData = $credential->getRpIdHash() . $flags . $credential->getPackedSignCount();
 
         openssl_sign($authenticatorData . $clientDataHash, $signature, $credential->privateKey, OPENSSL_ALGO_SHA256);
+
+        $credential->incrementSignCount();
+        $this->repository->save($credential);
 
         return [
             'id' => $this->getSafeId($credential->getId()),
