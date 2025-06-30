@@ -2,21 +2,21 @@
 
 namespace WebauthnEmulator\Tests\Integration;
 
-use PHPUnit\Framework\TestCase;
-use WebauthnEmulator\Credential;
 use WebauthnEmulator\CredentialRepository\FileRepository;
-use WebauthnEmulator\Exceptions\CredentialNotFoundException;
+use WebauthnEmulator\CredentialRepository\RepositoryInterface;
 
-class FileRepositoryTest extends TestCase
+class FileRepositoryTest extends AbstractRepositoryTest
 {
     private string $storagePath;
 
     protected function setUp(): void
     {
-        $this->storagePath = sys_get_temp_dir() . '/webauthn_test_storage.txt';
-        if (file_exists($this->storagePath)) {
-            unlink($this->storagePath);
+        // tempnam creates a unique file with 0600 permissions, which is good for tests.
+        $path = tempnam(sys_get_temp_dir(), 'webauthn_test_');
+        if ($path === false) {
+            $this->fail('Could not create temporary file for test.');
         }
+        $this->storagePath = $path;
     }
 
     protected function tearDown(): void
@@ -24,46 +24,36 @@ class FileRepositoryTest extends TestCase
         if (file_exists($this->storagePath)) {
             unlink($this->storagePath);
         }
-        $dir = dirname($this->storagePath);
-        if (is_dir($dir)) {
-            // Be careful with rmdir in real projects
-            @rmdir($dir);
-        }
+    }
+
+    protected function createRepository(): RepositoryInterface
+    {
+        return new FileRepository($this->storagePath);
     }
 
     public function testConstructorCreatesFile()
     {
-        $this->assertFileDoesNotExist($this->storagePath);
-        new FileRepository($this->storagePath);
-        $this->assertFileExists($this->storagePath);
+        $path = sys_get_temp_dir() . '/webauthn_test_file_' . uniqid() . '.txt';
+        $this->assertFileDoesNotExist($path);
+        new FileRepository($path);
+        $this->assertFileExists($path);
+        unlink($path);
     }
 
-    public function testSaveAndGetById()
+    public function testConstructorCreatesDirectoryAndFile()
     {
-        $repository = new FileRepository($this->storagePath);
+        $dir = sys_get_temp_dir() . '/webauthn_test_dir_' . uniqid();
+        $path = $dir . '/storage.txt';
+        $this->assertDirectoryDoesNotExist($dir);
 
-        $privateKey = openssl_pkey_new(["private_key_type" => OPENSSL_KEYTYPE_EC, "curve_name" => "prime256v1"]);
-        $credential = new Credential(
-            id: base64_encode('cred-123'),
-            privateKey: $privateKey,
-            rpId: 'integ-test.com',
-            userHandle: 'user-handle-456'
-        );
+        new FileRepository($path);
 
-        $repository->save($credential);
+        $this->assertDirectoryExists($dir);
+        $this->assertFileExists($path);
 
-        // Create a new instance to ensure it reads from the file
-        $newRepository = new FileRepository($this->storagePath);
-        $retrievedCredential = $newRepository->getById('integ-test.com', base64_encode('cred-123'));
-
-        $this->assertEquals($credential->getId(), $retrievedCredential->getId());
-        $this->assertEquals($credential->getRpId(), $retrievedCredential->getRpId());
+        // cleanup
+        unlink($path);
+        rmdir($dir);
     }
 
-    public function testGetByIdThrowsExceptionWhenNotFound()
-    {
-        $this->expectException(CredentialNotFoundException::class);
-        $repository = new FileRepository($this->storagePath);
-        $repository->getById('integ-test.com', 'not-found-id');
-    }
 }
