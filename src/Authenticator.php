@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace WebauthnEmulator;
 
 use CBOR\ByteStringObject;
@@ -131,7 +133,7 @@ class Authenticator implements AuthenticatorInterface
             }
         } else {
             try {
-                return $this->repository->getById($rpId, null);
+                return $this->repository->getById($rpId, '');
             } catch (CredentialNotFoundException) {
                 // nothing found, normal case
             }
