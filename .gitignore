@@ -5,3 +5,5 @@ tmp/
 *.sh
 cookies.json
 key_storage.txt
+.phpunit.result*
+

@@ -10,13 +10,18 @@
   },
   "autoload": {
     "psr-4": {
-      "WebauthnEmulator\\": "src",
+      "WebauthnEmulator\\": "src"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
       "WebauthnEmulator\\Tests\\": "tests"
     }
   },
   "license": "MIT",
   "minimum-stability": "stable",
   "require-dev": {
-    "guzzlehttp/guzzle": "^7.4"
+    "guzzlehttp/guzzle": "^7.4",
+    "phpunit/phpunit": "^9.5"
   }
 }

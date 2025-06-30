@@ -12,7 +12,19 @@ class CredentialFactory
             throw new InvalidArgumentException('Missing "rp" or "user" data');
         }
 
-        if (empty($options['pubKeyCredParams']) || !in_array(['alg' => -7, 'type' => 'public-key'], $options['pubKeyCredParams'])) {
+        if (empty($options['pubKeyCredParams'])) {
+            throw new InvalidArgumentException('Missing pubKeyCredParams');
+        }
+        
+        $hasSupportedType = false;
+        foreach ($options['pubKeyCredParams'] as $param) {
+            if (isset($param['alg']) && $param['alg'] === -7 && isset($param['type']) && $param['type'] === 'public-key') {
+                $hasSupportedType = true;
+                break;
+            }
+        }
+        
+        if (!$hasSupportedType) {
             throw new InvalidArgumentException('Requested pubKeyCredParams does not contain supported type. Only ES256 (alg: -7) is supported at the moment.');
         }
 
