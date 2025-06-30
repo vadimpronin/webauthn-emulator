@@ -3,14 +3,14 @@
 namespace WebauthnEmulator\Tests\Feature;
 
 use GuzzleHttp\Client;
-use GuzzleHttp\Cookie\FileCookieJar;
+use GuzzleHttp\Cookie\CookieJar;
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Exception\ServerException;
 use JsonException;
 use PHPUnit\Framework\TestCase;
 use stdClass;
 use WebauthnEmulator\Authenticator;
-use WebauthnEmulator\CredentialRepository\FileRepository;
+use WebauthnEmulator\CredentialRepository\InMemoryRepository;
 
 /**
  * @group E2E
@@ -25,23 +25,14 @@ class YubicoFlowTest extends TestCase
     private static Authenticator $staticAuthenticator;
     private static Client $staticHttpClient;
     private static string $staticRequestId;
-    private static string $storagePath;
-    private static string $cookiePath;
 
     public static function setUpBeforeClass(): void
     {
-        self::$storagePath = sys_get_temp_dir() . '/yubico_e2e_storage.txt';
-        self::$cookiePath = sys_get_temp_dir() . '/yubico_e2e_cookies.json';
-        
-        // Clean up before test suite
-        if (file_exists(self::$storagePath)) unlink(self::$storagePath);
-        if (file_exists(self::$cookiePath)) unlink(self::$cookiePath);
-
-        $storage = new FileRepository(self::$storagePath);
+        $storage = new InMemoryRepository();
         self::$staticAuthenticator = new Authenticator($storage);
 
         self::$staticHttpClient = new Client([
-            'cookies' => new FileCookieJar(self::$cookiePath, true),
+            'cookies' => new CookieJar(),
             'timeout' => 10,
         ]);
 
@@ -54,18 +45,6 @@ class YubicoFlowTest extends TestCase
         $this->authenticator = self::$staticAuthenticator;
         $this->httpClient = self::$staticHttpClient;
         $this->requestId = self::$staticRequestId;
-    }
-
-    protected function tearDown(): void
-    {
-        // Don't clean up after each test - keep storage and cookies for dependent tests
-    }
-    
-    public static function tearDownAfterClass(): void
-    {
-        // Clean up after all tests in this class are done
-        if (file_exists(self::$storagePath)) unlink(self::$storagePath);
-        if (file_exists(self::$cookiePath)) unlink(self::$cookiePath);
     }
 
     /**
