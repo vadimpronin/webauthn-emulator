@@ -18,6 +18,7 @@ allowing the developers to integrate WebAuthn client-side authentication into th
     - [Base64url vs Base64 Encoding](#base64url-vs-base64-encoding)
 - [More Examples](#more-examples)
 - [Storing Credentials](#storing-credentials)
+- [Testing](#testing)
 - [Limitations](#limitations)
 - [Contributing and Reporting Issues](#contributing-and-reporting-issues)
 - [License](#license)
@@ -397,6 +398,37 @@ $authenticator = new Authenticator($customStorage);
 This flexibility allows you to integrate the `webauthn-emulator` with various storage backends, such as databases or
 cloud storage solutions, depending on your application's requirements.
 
+## Testing
+
+This project uses [PHPUnit](https://phpunit.de/) for testing. The tests are organized into three suites:
+
+- **Unit Tests**: Located in `tests/Unit`, these tests check individual components in isolation and do not require any
+  external dependencies or network access.
+- **Integration Tests**: Located in `tests/Integration`, these tests verify the interaction between different components
+  of the library, such as the `Authenticator` and the `FileRepository`.
+- **Feature Tests**: Located in `tests/Feature`, these are end-to-end (E2E) tests that perform full registration and
+  login flows against live public WebAuthn demo servers. These tests require an active internet connection and are
+  marked with the `@group E2E` annotation. They may occasionally fail due to issues with the external services.
+
+### Setup
+
+Before running the tests, you need to install the development dependencies using Composer:
+
+```bash
+composer install
+```
+
+### Running Tests
+
+You can run the entire test suite, specific suites, or individual tests using the `phpunit` command from the project
+root.
+
+**Run all tests:**
+
+```bash
+./vendor/bin/phpunit
+```
+
 ## Limitations
 
 `webauthn-emulator` is designed to support the core functionalities required for WebAuthn registration and
@@ -426,4 +458,4 @@ file in the repository.
 ## Acknowledgments
 
 Special thanks to Rayaz Sultanov ([codeproger](https://github.com/codeproger)) for co-creating `webauthn-emulator`.
-
+```
