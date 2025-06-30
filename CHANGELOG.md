@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.2.0] - 2024-12-30
+## [1.2.0] - 2025-06-30
 
 ### Added
 - **Testing Framework**: Complete PHPUnit testing infrastructure with comprehensive test coverage
@@ -31,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Code Style**: Consistent formatting and code style improvements across the codebase
 - **Example Cleanup**: Removed debug code and improved example scripts for better clarity
 
-## [1.1.0] - 2024-11-15
+## [1.1.0] - 2023-12-28
 
 ### Added
 - **Base64url Encoding Utilities**: Helper functions for base64url encoding/decoding
@@ -48,7 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Encoding Consistency**: Fixed base64url encoding issues in example scripts
 - **Server Compatibility**: Improved compatibility with various WebAuthn server implementations
 
-## [1.0.0] - 2024-10-01
+## [1.0.0] - 2023-12-28
 
 ### Added
 - Initial release of WebAuthn Emulator
@@ -66,6 +66,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Automatic sign counter management for replay attack prevention
 - Interface-based architecture for extensibility
 
-[1.2.0]: https://github.com/pronin/webauthn-emulator/compare/1.1.0...1.2.0
-[1.1.0]: https://github.com/pronin/webauthn-emulator/compare/1.0.0...1.1.0
-[1.0.0]: https://github.com/pronin/webauthn-emulator/releases/tag/1.0.0
+[1.2.0]: https://github.com/vadimpronin/webauthn-emulator/compare/1.1.0...1.2.0
+[1.1.0]: https://github.com/vadimpronin/webauthn-emulator/compare/1.0.0...1.1.0
+[1.0.0]: https://github.com/vadimpronin/webauthn-emulator/releases/tag/1.0.0

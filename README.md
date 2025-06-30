@@ -458,4 +458,3 @@ file in the repository.
 ## Acknowledgments
 
 Special thanks to Rayaz Sultanov ([codeproger](https://github.com/codeproger)) for co-creating `webauthn-emulator`.
-```
