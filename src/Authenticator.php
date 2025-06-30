@@ -111,6 +111,13 @@ class Authenticator implements AuthenticatorInterface
 
     protected function getCredential(string $rpId, string|array|null $credentialIds): CredentialInterface
     {
+        if (empty($credentialIds)) {
+            $credentials = $this->repository->get($rpId);
+            if (!empty($credentials)) {
+                return reset($credentials); // Return the first credential for the rpId
+            }
+        }
+
         if (is_string($credentialIds)) {
             $credentialIds = [[
                 'id' => $credentialIds,
@@ -131,15 +138,9 @@ class Authenticator implements AuthenticatorInterface
 
                 return $credential;
             }
-        } else {
-            try {
-                return $this->repository->getById($rpId, '');
-            } catch (CredentialNotFoundException) {
-                // nothing found, normal case
-            }
         }
 
-        throw new InvalidArgumentException('Requested rpId and userId do not match any credential');
+        throw new InvalidArgumentException('Requested rpId and credentialId(s) not found in the repository');
     }
 
     protected function getAuthData(Credential $credential): string

@@ -97,7 +97,7 @@ class AuthenticatorTest extends TestCase
     public function testGetAssertionThrowsWhenNoCredentialFound()
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Requested rpId and userId do not match any credential');
+        $this->expectExceptionMessage('Requested rpId and credentialId(s) not found in the repository');
 
         $rpId = 'localhost';
         $credentialId = base64_encode('non-existent-cred-id');
@@ -110,4 +110,48 @@ class AuthenticatorTest extends TestCase
 
         $this->authenticator->getAssertion($rpId, [['id' => $credentialId]], 'challenge');
     }
+
+    /**
+     * @throws JsonException
+     */
+    public function testGetAssertionWithSingleStringCredentialId()
+    {
+        $rpId = 'localhost';
+        $credentialId = 'some-cred-id-string';
+        $credentialIdBase64 = base64_encode($credentialId);
+        $challenge = 'some-auth-challenge';
+        $privateKey = openssl_pkey_new(["private_key_type" => OPENSSL_KEYTYPE_EC, "curve_name" => "prime256v1"]);
+        $credential = new Credential($credentialIdBase64, $privateKey, $rpId, 'user-handle', 0);
+        $this->repositoryMock
+            ->expects($this->once())
+            ->method('getById')
+            ->with($rpId, $credentialIdBase64) // The authenticator converts the ID to raw before calling the repo
+            ->willReturn($credential);
+        $this->repositoryMock
+            ->expects($this->once())
+            ->method('save');
+        $result = $this->authenticator->getAssertion($rpId, $credentialIdBase64, $challenge);
+        $this->assertIsArray($result);
+        $this->assertArrayHasKey('id', $result);
+    }
+
+    /**
+     * @throws JsonException
+     */
+    public function testGetAssertionWithNullCredentialId()
+    {
+        $rpId = 'localhost';
+        $challenge = 'some-auth-challenge';
+        $privateKey = openssl_pkey_new(["private_key_type" => OPENSSL_KEYTYPE_EC, "curve_name" => "prime256v1"]);
+        $credential = new Credential(base64_encode('cred-id'), $privateKey, $rpId, 'user-handle', 0);
+        $this->repositoryMock
+            ->expects($this->once())
+            ->method('get')
+            ->with($rpId)
+            ->willReturn([$credential]);
+        $result = $this->authenticator->getAssertion($rpId, null, $challenge);
+        $this->assertIsArray($result);
+        $this->assertSame(1, $credential->signCount);
+    }
+
 }
